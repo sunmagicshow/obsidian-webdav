@@ -3,7 +3,7 @@
   "name": "Webdav Explorer",
   "version": "1.0.0",
   "description": "",
-  "author": "蓝星晓夜1",
+  "author": "蓝星晓夜",
   "minAppVersion": "1.7.4",
   "main": "main.js",
   "isDesktopOnly": false
