@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",                             // ✅ 升级：支持 ?.、?? 等现代语法
+    "module": "commonjs",
+    "lib": ["ES2020", "DOM"],                       // ✅ 明确支持的库
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,                           // ✅ 加快编译，跳过类型库检查
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",                     // ✅ 明确模块解析方式，重要！
+    "resolveJsonModule": false                      // 可选：如需 import json 可设为 true
+  },
+  "include": ["src"]
+}
