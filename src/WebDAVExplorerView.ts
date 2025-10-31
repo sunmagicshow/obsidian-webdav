@@ -1,9 +1,6 @@
 import { WorkspaceLeaf, View, Notice, Menu, MarkdownView, setIcon } from 'obsidian';
 import WebDAVPlugin from './main';
-import { WebDAVServer, WebDAVFile, VIEW_TYPE_WEBDAV_EXPLORER } from './types'; // 添加 VIEW_TYPE_WEBDAV_EXPLORER
-import { WebDAVClient } from './WebDAVClient';
-import { FileUtils } from './fileUtils';
-import { DomUtils } from './domUtils';
+import { WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER } from './types';
 import { createClient } from "webdav";
 
 
@@ -369,14 +366,6 @@ export class WebDAVExplorerView extends View {
 
 		return iconMap[ext];
 	}
-
-	//重要!不能改动!
-	// getFileFullUrl(remotePath: string): string {
-	// 	if (!this.currentServer) return '';
-	// 	const baseUrl = this.currentServer.url.replace(/\/$/, '');
-	// 	const separator = remotePath.startsWith('/') ? '' : '/';
-	// 	return `${baseUrl}${separator}${remotePath}`.replace(/#/g, '%23').replace(/\(/g, '%28').replace(/\)/g, '%29');
-	// }
 
 	getFileFullUrl(remotePath: string): string {
 		if (!this.currentServer) return '';

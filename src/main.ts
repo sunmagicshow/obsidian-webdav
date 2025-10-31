@@ -185,7 +185,6 @@ export default class WebDAVPlugin extends Plugin {
 		const style = document.createElement('style');
 		style.id = 'webdav-explorer-style';
 		style.textContent = `
-			/* 连接失败提示样式 */
 			.webdav-connection-failed {
 				display: flex;
 				flex-direction: column;
@@ -210,14 +209,12 @@ export default class WebDAVPlugin extends Plugin {
 				max-width: 100%;
 			}
 			
-			/* 视图容器样式 */
 			.webdav-explorer-view {
 				height: 100%;
 				display: flex;
 				flex-direction: column;
 			}
 			
-			/* 头部样式 */
 			.webdav-header {
 				display: flex;
 				flex-direction: column;
@@ -228,7 +225,6 @@ export default class WebDAVPlugin extends Plugin {
 				flex-shrink: 0;
 			}
 			
-			/* 标题行样式 - 所有按钮靠左 */
 			.webdav-title-row {
 				display: flex;
 				align-items: center;
@@ -236,7 +232,6 @@ export default class WebDAVPlugin extends Plugin {
 				padding: 0 8px;
 			}
 			
-			/* 统一按钮样式 */
 			.webdav-button {
 				display: flex;
 				align-items: center;
@@ -256,14 +251,12 @@ export default class WebDAVPlugin extends Plugin {
 				border-color: var(--background-modifier-border-hover);
 			}
 			
-			/* 按钮内容容器样式 */
 			.webdav-button-content {
 				display: flex;
 				align-items: center;
 				gap: 4px;
 			}
-			
-			/* 按钮图标样式 */
+
 			.webdav-server-icon,
 			.webdav-refresh-icon,
 			.webdav-sort-icon {
@@ -273,7 +266,6 @@ export default class WebDAVPlugin extends Plugin {
 				height: 16px;
 			}
 			
-			/* 按钮文字样式 */
 			.webdav-button-text {
 				font-size: 0.8em;
 				color: var(--text-muted);
@@ -284,14 +276,13 @@ export default class WebDAVPlugin extends Plugin {
 			.webdav-button:hover .webdav-button-text {
 				color: var(--text-normal);
 			}
-			/* 按钮内容容器样式 */
+
 			.webdav-button-content {
 				display: flex;
 				align-items: center;
 				gap: 4px;
 			}
 			
-			/* 按钮图标样式 */
 			.webdav-server-icon,
 			.webdav-refresh-icon,
 			.webdav-sort-icon {
@@ -301,7 +292,6 @@ export default class WebDAVPlugin extends Plugin {
 				height: 16px;
 			}
 			
-			/* 按钮文字样式 */
 			.webdav-button-text {
 				font-size: 0.8em;
 				color: var(--text-muted);
@@ -315,14 +305,12 @@ export default class WebDAVPlugin extends Plugin {
 				color: var(--text-normal);
 			}
 			
-			/* 操作按钮容器样式 */
 			.webdav-actions-container {
 				display: flex;
 				align-items: center;
 				gap: 8px;
 			}
 			
-			/* 显示名称样式 */
 			.webdav-display-name {
 				font-size: 0.9em;
 				font-weight: 600;
@@ -331,7 +319,7 @@ export default class WebDAVPlugin extends Plugin {
 				margin-left: 8px;
 			}
 			
-			/* 面包屑导航样式 */
+
 			.webdav-breadcrumb-container {
 				padding: 0 8px;
 			}
@@ -390,8 +378,7 @@ export default class WebDAVPlugin extends Plugin {
 				height: 14px;
 				opacity: 0.5;
 			}
-			
-			/* 文件列表容器样式 */
+
 			.file-list-container {
 				flex: 1;
 				display: flex;
@@ -405,7 +392,6 @@ export default class WebDAVPlugin extends Plugin {
 				overflow-x: hidden;
 			}
 			
-			/* 文件项样式 */
 			.file-item {
 				padding: 8px 12px;
 				margin: 2px 0;
@@ -479,8 +465,6 @@ export default class WebDAVPlugin extends Plugin {
 				cursor: default;
 			}
 			
-			
-			/* 滚动条样式 */
 			.file-list::-webkit-scrollbar {
 				width: 8px;
 			}
@@ -498,7 +482,6 @@ export default class WebDAVPlugin extends Plugin {
 				background: var(--background-modifier-border-hover);
 			}
 			
-			/* 无服务器配置提示样式 */
 			.webdav-no-servers {
 				text-align: center;
 				color: var(--text-muted);
@@ -523,7 +506,6 @@ export default class WebDAVPlugin extends Plugin {
 				font-size: 1.1em;
 			}
 			
-			/* 设置面板样式 */
 			.webdav-no-servers {
 				text-align: center;
 				color: var(--text-muted);
@@ -534,7 +516,6 @@ export default class WebDAVPlugin extends Plugin {
 				margin: 10px 0;
 			}
 			
-			/* 点击图标通用样式 */
 			.clickable-icon {
 				cursor: pointer;
 				transition: all 0.15s ease;
@@ -547,45 +528,7 @@ export default class WebDAVPlugin extends Plugin {
 			.clickable-icon:active {
 				transform: scale(0.98);
 			}
-			
-			/* 响应式设计 */
-			@media (max-width: 400px) {
-				.webdav-title-row {
-					flex-wrap: wrap;
-					gap: 6px;
-				}
-				
-				.webdav-button-text {
-					display: none;
-				}
-				
-				.webdav-actions-container {
-					gap: 4px;
-				}
-				
-				.webdav-server-button,
-				.webdav-refresh-button,
-				.webdav-sort-button {
-					padding: 4px 6px;
-				}
-			}
-			
-			/* 小屏幕适配 */
-			@media (max-width: 300px) {
-				.webdav-title-row {
-					justify-content: space-between;
-				}
-				
-				.webdav-server-button {
-					flex: 1;
-					min-width: 0;
-				}
-				
-				.webdav-actions-container {
-					margin-left: 0;
-				}
-			}
-    `;
+		`;
 		document.head.appendChild(style);
 	}
 

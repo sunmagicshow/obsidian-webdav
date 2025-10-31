@@ -1,10 +1,11 @@
 {
   "id": "webdav-explorer",
-  "name": "Webdav Explorer",
+  "name": "WebDAV Explorer",
   "version": "1.0.0",
-  "description": "",
+  "description": "WebDAV Server Explorer for Obsidian",
   "author": "蓝星晓夜",
   "minAppVersion": "1.7.4",
   "main": "main.js",
-  "isDesktopOnly": false
+  "isDesktopOnly": true,
+  "fundingUrl": ""
 }

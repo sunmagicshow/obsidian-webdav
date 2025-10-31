@@ -27,9 +27,9 @@ module.exports = {
     electron: 'commonjs electron',
     obsidian: 'commonjs obsidian',
   },
-  mode: 'none', // 👈 最安全：不启用任何默认优化
+  mode: 'none',
   devtool: 'source-map',
   optimization: {
-    minimize: false, // 👈 明确关闭压缩
+    minimize: false,
   },
 };
