@@ -13074,13 +13074,6 @@ var WebDAVExplorerView = class extends import_obsidian2.View {
     }
     return iconMap[ext2];
   }
-  //重要!不能改动!
-  // getFileFullUrl(remotePath: string): string {
-  // 	if (!this.currentServer) return '';
-  // 	const baseUrl = this.currentServer.url.replace(/\/$/, '');
-  // 	const separator = remotePath.startsWith('/') ? '' : '/';
-  // 	return `${baseUrl}${separator}${remotePath}`.replace(/#/g, '%23').replace(/\(/g, '%28').replace(/\)/g, '%29');
-  // }
   getFileFullUrl(remotePath) {
     if (!this.currentServer) return "";
     const baseUrl = this.currentServer.url.replace(/\/$/, "");
@@ -13794,7 +13787,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
     const style = document.createElement("style");
     style.id = "webdav-explorer-style";
     style.textContent = `
-			/* \u8FDE\u63A5\u5931\u8D25\u63D0\u793A\u6837\u5F0F */
 			.webdav-connection-failed {
 				display: flex;
 				flex-direction: column;
@@ -13819,14 +13811,12 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				max-width: 100%;
 			}
 			
-			/* \u89C6\u56FE\u5BB9\u5668\u6837\u5F0F */
 			.webdav-explorer-view {
 				height: 100%;
 				display: flex;
 				flex-direction: column;
 			}
 			
-			/* \u5934\u90E8\u6837\u5F0F */
 			.webdav-header {
 				display: flex;
 				flex-direction: column;
@@ -13837,7 +13827,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				flex-shrink: 0;
 			}
 			
-			/* \u6807\u9898\u884C\u6837\u5F0F - \u6240\u6709\u6309\u94AE\u9760\u5DE6 */
 			.webdav-title-row {
 				display: flex;
 				align-items: center;
@@ -13845,7 +13834,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				padding: 0 8px;
 			}
 			
-			/* \u7EDF\u4E00\u6309\u94AE\u6837\u5F0F */
 			.webdav-button {
 				display: flex;
 				align-items: center;
@@ -13865,14 +13853,12 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				border-color: var(--background-modifier-border-hover);
 			}
 			
-			/* \u6309\u94AE\u5185\u5BB9\u5BB9\u5668\u6837\u5F0F */
 			.webdav-button-content {
 				display: flex;
 				align-items: center;
 				gap: 4px;
 			}
-			
-			/* \u6309\u94AE\u56FE\u6807\u6837\u5F0F */
+
 			.webdav-server-icon,
 			.webdav-refresh-icon,
 			.webdav-sort-icon {
@@ -13882,7 +13868,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				height: 16px;
 			}
 			
-			/* \u6309\u94AE\u6587\u5B57\u6837\u5F0F */
 			.webdav-button-text {
 				font-size: 0.8em;
 				color: var(--text-muted);
@@ -13893,14 +13878,13 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 			.webdav-button:hover .webdav-button-text {
 				color: var(--text-normal);
 			}
-			/* \u6309\u94AE\u5185\u5BB9\u5BB9\u5668\u6837\u5F0F */
+
 			.webdav-button-content {
 				display: flex;
 				align-items: center;
 				gap: 4px;
 			}
 			
-			/* \u6309\u94AE\u56FE\u6807\u6837\u5F0F */
 			.webdav-server-icon,
 			.webdav-refresh-icon,
 			.webdav-sort-icon {
@@ -13910,7 +13894,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				height: 16px;
 			}
 			
-			/* \u6309\u94AE\u6587\u5B57\u6837\u5F0F */
 			.webdav-button-text {
 				font-size: 0.8em;
 				color: var(--text-muted);
@@ -13924,14 +13907,12 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				color: var(--text-normal);
 			}
 			
-			/* \u64CD\u4F5C\u6309\u94AE\u5BB9\u5668\u6837\u5F0F */
 			.webdav-actions-container {
 				display: flex;
 				align-items: center;
 				gap: 8px;
 			}
 			
-			/* \u663E\u793A\u540D\u79F0\u6837\u5F0F */
 			.webdav-display-name {
 				font-size: 0.9em;
 				font-weight: 600;
@@ -13940,7 +13921,7 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				margin-left: 8px;
 			}
 			
-			/* \u9762\u5305\u5C51\u5BFC\u822A\u6837\u5F0F */
+
 			.webdav-breadcrumb-container {
 				padding: 0 8px;
 			}
@@ -13999,8 +13980,7 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				height: 14px;
 				opacity: 0.5;
 			}
-			
-			/* \u6587\u4EF6\u5217\u8868\u5BB9\u5668\u6837\u5F0F */
+
 			.file-list-container {
 				flex: 1;
 				display: flex;
@@ -14014,7 +13994,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				overflow-x: hidden;
 			}
 			
-			/* \u6587\u4EF6\u9879\u6837\u5F0F */
 			.file-item {
 				padding: 8px 12px;
 				margin: 2px 0;
@@ -14088,8 +14067,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				cursor: default;
 			}
 			
-			
-			/* \u6EDA\u52A8\u6761\u6837\u5F0F */
 			.file-list::-webkit-scrollbar {
 				width: 8px;
 			}
@@ -14107,7 +14084,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				background: var(--background-modifier-border-hover);
 			}
 			
-			/* \u65E0\u670D\u52A1\u5668\u914D\u7F6E\u63D0\u793A\u6837\u5F0F */
 			.webdav-no-servers {
 				text-align: center;
 				color: var(--text-muted);
@@ -14132,7 +14108,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				font-size: 1.1em;
 			}
 			
-			/* \u8BBE\u7F6E\u9762\u677F\u6837\u5F0F */
 			.webdav-no-servers {
 				text-align: center;
 				color: var(--text-muted);
@@ -14143,7 +14118,6 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 				margin: 10px 0;
 			}
 			
-			/* \u70B9\u51FB\u56FE\u6807\u901A\u7528\u6837\u5F0F */
 			.clickable-icon {
 				cursor: pointer;
 				transition: all 0.15s ease;
@@ -14156,45 +14130,7 @@ var WebDAVPlugin = class extends import_obsidian3.Plugin {
 			.clickable-icon:active {
 				transform: scale(0.98);
 			}
-			
-			/* \u54CD\u5E94\u5F0F\u8BBE\u8BA1 */
-			@media (max-width: 400px) {
-				.webdav-title-row {
-					flex-wrap: wrap;
-					gap: 6px;
-				}
-				
-				.webdav-button-text {
-					display: none;
-				}
-				
-				.webdav-actions-container {
-					gap: 4px;
-				}
-				
-				.webdav-server-button,
-				.webdav-refresh-button,
-				.webdav-sort-button {
-					padding: 4px 6px;
-				}
-			}
-			
-			/* \u5C0F\u5C4F\u5E55\u9002\u914D */
-			@media (max-width: 300px) {
-				.webdav-title-row {
-					justify-content: space-between;
-				}
-				
-				.webdav-server-button {
-					flex: 1;
-					min-width: 0;
-				}
-				
-				.webdav-actions-container {
-					margin-left: 0;
-				}
-			}
-    `;
+		`;
     document.head.appendChild(style);
   }
   // 注册拖拽功能（空实现）
