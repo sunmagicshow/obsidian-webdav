@@ -1,2 +1,2 @@
 # obsidian-webdav
-WebDAV Server Explorer for Obsidian
+WebDAV Server Explorer.
