@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
-import  WebDAVPlugin from './main';
+import WebDAVPlugin from './main';
 import { WebDAVServer } from './types';
 
 export class WebDAVSettingTab extends PluginSettingTab {
@@ -17,7 +17,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
     const t = i18n();
 
     containerEl.empty();
-    containerEl.createEl('h2', { text: t.settings.title });
+    // 移除了标题创建：containerEl.createEl('h2', { text: t.settings.title });
 
     // 默认服务器设置
     const defaultServerSetting = new Setting(containerEl)
@@ -43,40 +43,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     containerEl.createEl('hr');
 
-    // 服务器列表标题和添加按钮
-    const serversHeader = containerEl.createEl('div', { cls: 'webdav-servers-header' });
-    serversHeader.createEl('h3', { text: t.settings.serverList });
-
-    // 添加服务器按钮
-    const addServerSetting = new Setting(serversHeader)
-      .setName(t.settings.addServer)
-      .addButton(button => {
-        button
-          .setButtonText('+')
-          .setCta()
-          .onClick(async () => {
-            const newServer: WebDAVServer = {
-              id: this.generateId(),
-              name: `WebDAV Server ${this.plugin.settings.servers.length + 1}`,
-              url: '',
-              username: '',
-              password: '',
-              remoteDir: '',
-              isDefault: this.plugin.settings.servers.length === 0
-            };
-            this.plugin.settings.servers.push(newServer);
-
-            if (this.plugin.settings.servers.length === 1) {
-              newServer.isDefault = true;
-              this.plugin.settings.currentServerId = newServer.id;
-            }
-
-            await this.plugin.saveSettings();
-            this.display();
-          });
-      });
-
-    // 服务器列表容器
+    // 服务器列表容器 - 移除了服务器列表标题
     const serversContainer = containerEl.createEl('div', { cls: 'webdav-servers-container' });
 
     // 如果没有服务器，显示提示
@@ -194,6 +161,35 @@ export class WebDAVSettingTab extends PluginSettingTab {
         serversContainer.createEl('hr');
       }
     });
+
+    // 添加服务器按钮 - 移到了服务器列表后面
+    const addServerSetting = new Setting(serversContainer)
+      .setName(t.settings.addServer)
+      .addButton(button => {
+        button
+          .setButtonText('+')
+          .setCta()
+          .onClick(async () => {
+            const newServer: WebDAVServer = {
+              id: this.generateId(),
+              name: `WebDAV Server ${this.plugin.settings.servers.length + 1}`,
+              url: '',
+              username: '',
+              password: '',
+              remoteDir: '',
+              isDefault: this.plugin.settings.servers.length === 0
+            };
+            this.plugin.settings.servers.push(newServer);
+
+            if (this.plugin.settings.servers.length === 1) {
+              newServer.isDefault = true;
+              this.plugin.settings.currentServerId = newServer.id;
+            }
+
+            await this.plugin.saveSettings();
+            this.display();
+          });
+      });
   }
 
   private updateDefaultServerDropdown() {
