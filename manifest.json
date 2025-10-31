@@ -2,7 +2,7 @@
   "id": "webdav-explorer",
   "name": "WebDAV Explorer",
   "version": "1.0.0",
-  "description": "WebDAV Server Explorer",
+  "description": "WebDAV Server Explorer.",
   "author": "sunmagicshow",
   "minAppVersion": "1.7.4",
   "main": "main.js",
