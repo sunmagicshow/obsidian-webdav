@@ -5,7 +5,6 @@
   "description": "WebDAV Server Explorer.",
   "author": "sunmagicshow",
   "minAppVersion": "1.7.4",
-  "main": "main.js",
   "isDesktopOnly": true,
   "fundingUrl": ""
 }
