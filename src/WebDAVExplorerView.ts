@@ -298,15 +298,21 @@ export class WebDAVExplorerView extends View {
             }
 
             // 空目录处理
+            // 空目录处理 - 只有当没有文件且不是根目录时才显示空文件夹提示
             if (files.length === 0) {
-                fileList.createEl('div', {
-                    cls: 'file-item empty',
-                    text: '📂 ' + t.view.emptyDir
-                });
+                // 如果当前目录不是根目录且已经显示了".."项，则不显示空文件夹提示
+                if (this.currentPath === this.rootPath) {
+                    // 根目录为空时显示空文件夹提示
+                    fileList.createEl('div', {
+                        cls: 'file-item empty',
+                        text: '📂 ' + t.view.emptyDir
+                    });
+                }
+                // 非根目录且为空时，只显示".."项，不显示空文件夹提示
+            } else {
+                // 有文件时渲染文件列表
+                this.renderFileList(fileList, files);
             }
-
-            // 渲染文件列表
-            this.renderFileList(fileList, files);
 
         } catch (err: any) {
             loadingEl.remove();
@@ -479,7 +485,7 @@ export class WebDAVExplorerView extends View {
         this.serverSelector = titleRow.createEl('div', {cls: 'webdav-button'});
         const serverContent = this.serverSelector.createEl('div', {cls: 'webdav-button-content'});
         this.serverIconEl = serverContent.createSpan({cls: 'webdav-server-icon'});
-        const serverText = serverContent.createSpan({
+        serverContent.createSpan({
             cls: 'webdav-button-text',
             text: this.currentServer?.name || ''
         });
@@ -516,8 +522,8 @@ export class WebDAVExplorerView extends View {
             this.showSortMenu(evt);
         };
 
-        // // 面包屑导航容器
-        // const breadcrumbContainer = headerEl.createEl('div', {cls: 'webdav-breadcrumb-container'});
+        // 面包屑导航容器
+        headerEl.createEl('div', {cls: 'webdav-breadcrumb-container'});
 
         // 文件列表容器
         const listContainer = this.containerEl.createEl('div', {cls: 'file-list-container'});
@@ -760,7 +766,7 @@ export class WebDAVExplorerView extends View {
         }
     }
 
-// 更新服务器按钮文本
+    // 更新服务器按钮文本
     private updateServerButtonText() {
         if (!this.serverSelector || !this.currentServer) return;
 
@@ -828,29 +834,29 @@ export class WebDAVExplorerView extends View {
 
     // 超时控制包装器
 // 超时控制包装器
-private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-    return new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-            reject(new Error('Request timeout')); // 确保使用 Error 对象
-        }, timeoutMs);
+    private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+        return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                reject(new Error('Request timeout')); // 确保使用 Error 对象
+            }, timeoutMs);
 
-        promise.then(
-            (result) => {
-                clearTimeout(timeoutId);
-                resolve(result);
-            },
-            (error) => {
-                clearTimeout(timeoutId);
-                // 确保错误是 Error 对象，如果不是则包装
-                if (error instanceof Error) {
-                    reject(error);
-                } else {
-                    reject(new Error(String(error)));
+            promise.then(
+                (result) => {
+                    clearTimeout(timeoutId);
+                    resolve(result);
+                },
+                (error) => {
+                    clearTimeout(timeoutId);
+                    // 确保错误是 Error 对象，如果不是则包装
+                    if (error instanceof Error) {
+                        reject(error);
+                    } else {
+                        reject(new Error(String(error)));
+                    }
                 }
-            }
-        );
-    });
-}
+            );
+        });
+    }
 
     // 渲染文件列表
 // 渲染文件列表 - 使用排序后的文件
