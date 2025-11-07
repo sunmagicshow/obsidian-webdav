@@ -1,8 +1,8 @@
-import { createClient } from 'webdav';
+import { createClient, FileStat, ResponseDataDetailed } from 'webdav';
 import { WebDAVServer } from './types';
 
 export class WebDAVClient {
-  private client: any = null;
+  private client: ReturnType<typeof createClient> | null = null;
 
   constructor(private server: WebDAVServer) {}
 
@@ -34,18 +34,27 @@ export class WebDAVClient {
     }
   }
 
-  async getDirectoryContents(path: string): Promise<any[]> {
+  async getDirectoryContents(path: string): Promise<FileStat[]> {
     if (!this.client) {
       throw new Error('WebDAV client not initialized');
     }
-    return await this.client.getDirectoryContents(path);
+
+    const result = await this.client.getDirectoryContents(path);
+
+    // 处理两种可能的返回类型
+    if (Array.isArray(result)) {
+      return result;
+    } else {
+      // 如果是 ResponseDataDetailed 类型，返回 data 属性
+      return (result as ResponseDataDetailed<FileStat[]>).data;
+    }
   }
 
-  getClient() {
+  getClient(): ReturnType<typeof createClient> | null {
     return this.client;
   }
 
-  destroy() {
+  destroy(): void {
     this.client = null;
   }
 }

@@ -1,7 +1,7 @@
 import {Notice, Plugin} from 'obsidian';
 import { WebDAVSettingTab } from './WebDAVSettingTab';
 import { WebDAVExplorerView } from './WebDAVExplorerView';
-import {setI18n, i18n, LangPack, Locale} from './i18n';
+import {initI18n, setI18n, i18n, LangPack, Locale, saveLocaleSetting, isValidLocale} from './i18n';
 import { WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER } from './types';
 
 export default class WebDAVPlugin extends Plugin {
@@ -15,10 +15,10 @@ export default class WebDAVPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// 初始化语言设置
-		const locale = this.getLocale();
-		setI18n(locale);
-        // 注册视图
+		// 初始化语言设置 - 使用新的初始化方法
+		initI18n(this.app);
+
+		// 注册视图
 		this.registerView(
 			VIEW_TYPE_WEBDAV_EXPLORER,
 			(leaf) => new WebDAVExplorerView(leaf, this),
@@ -209,14 +209,12 @@ export default class WebDAVPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	// 获取语言设置
-	private getLocale(): Locale {
-		try {
-			const language = localStorage.getItem('language');
-			return language?.startsWith('zh') ? 'zh' : 'en'; // 中文或英文
-		} catch (e) {
-			return 'en';
+	// 保存语言设置到插件存储（供设置面板调用）
+	public async setLocale(locale: Locale): Promise<void> {
+		if (isValidLocale(locale)) {
+			setI18n(locale);
+			saveLocaleSetting(this.app, locale);
+			// 可以在这里添加界面刷新的逻辑
 		}
 	}
 }
-

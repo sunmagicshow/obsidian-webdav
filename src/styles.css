@@ -9,7 +9,9 @@
 	padding: 20px;
 	text-align: center;
 }
-
+.webdav-settings-tab .webdav-dropdown {
+  min-width: 150px;
+}
 .webdav-connection-failed p {
 	margin: 0;
 	color: var(--text-muted);

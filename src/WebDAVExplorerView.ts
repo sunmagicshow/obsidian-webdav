@@ -69,9 +69,6 @@ export class WebDAVExplorerView extends View {
         await this.connectAndList();
     }
 
-
-// 连接服务器并列出目录
-
 // 连接服务器并列出目录
     async connectAndList() {
         if (!this.currentServer) {
@@ -256,10 +253,10 @@ export class WebDAVExplorerView extends View {
 
         try {
             // 获取目录内容（带超时控制）
-            const files = await this.withTimeout(
+            const files = await this.withTimeout<FileStat[]>(
                 this.client.getDirectoryContents(this.currentPath),
                 15000 // 15秒超时
-            ) as FileStat[];
+            );
 
             loadingEl.remove();
 
@@ -388,11 +385,8 @@ export class WebDAVExplorerView extends View {
         return `${baseUrl}${separator}${encodedPath}`;
     }
 
-    // 获取文件的完整URL
-
-    // 使用系统应用打开文件
 // 使用系统应用打开文件
-    async openFileWithWeb(remotePath: string) {
+    openFileWithWeb(remotePath: string) {
         if (!this.currentServer) return;
 
         const t = this.plugin.i18n();

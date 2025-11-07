@@ -26,7 +26,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
       defaultServerSetting.addDropdown(dropdown => {
         this.defaultServerDropdown = dropdown;
-        dropdown.selectEl.style.minWidth = '150px';
+        dropdown.selectEl.addClass('webdav-dropdown');
         this.updateDefaultServerDropdown();
 
         dropdown.onChange(async (value: string) => {

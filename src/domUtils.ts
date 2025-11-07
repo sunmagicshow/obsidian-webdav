@@ -33,7 +33,7 @@ export class DomUtils {
     const iconEl = content.createSpan({ cls: 'webdav-icon' });
     setIcon(iconEl, icon);
 
-    const textEl = content.createSpan({
+    content.createSpan({
       cls: 'webdav-button-text',
       text
     });
