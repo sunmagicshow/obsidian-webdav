@@ -8,9 +8,6 @@ let currentLocale: Locale = 'en'; // 先设置默认值，在插件初始化时�
 // 存储键名
 const LANGUAGE_STORAGE_KEY = 'webdav-plugin-language';
 
-// 设置语言
-export function setI18n(locale: Locale): void;
-export function setI18n(locale: string): void;
 export function setI18n(locale: Locale | string): void {
 	if (isValidLocale(locale)) {
 		currentLocale = locale;
