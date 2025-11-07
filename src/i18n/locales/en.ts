@@ -1,32 +1,32 @@
 import { LangPack } from '../types';
 
 const en: LangPack = {
-	displayName: 'WebDAV Explorer',
+	displayName: 'WebDAV explorer',
 	settings: {
-		title: 'WebDAV Settings',
-		addServer: 'Add WebDAV Server',
-		noServers: 'No WebDAV servers configured. Click the "+" button to add one.',
+		title: 'WebDAV settings',
+		addServer: 'Add webdav server',
+		noServers: 'No webdav servers configured. Click the "+" button to add one.',
 		url: {
-			name: 'WebDAV Server URL',
-			desc: 'The full URL of your WebDAV server'
+			name: 'WebDAV server URL',
+			desc: 'The full URL of your webdav server'
 		},
 		username: 'Username',
 		password: 'Password',
 		remoteDir: {
-			name: 'Remote Directory',
+			name: 'Remote directory',
 			desc: 'Remote directory path (e.g., /notes)'
 		},
-		deleteServer: 'Delete Server',
-		defaultServer: 'Default Server',
-		defaultServerDesc: 'Select the default server to use when opening WebDAV Explorer',
+		deleteServer: 'Delete server',
+		defaultServer: 'Default server',
+		defaultServerDesc: 'Select the default server to use when opening webdav explorer',
 		noServersAvailable: 'No servers available',
-		serverName: 'Server Name',
+		serverName: 'Server name',
 		deleteNotice: 'Cannot delete the last server. At least one server is required.',
-		serverList: 'WebDAV Servers List',
-		serverListEmpty: 'Please configure at least one WebDAV server in settings',
+		serverList: 'WebDAV servers list',
+		serverListEmpty: 'Please configure at least one webdav server in settings',
 	},
 	view: {
-		pleaseConfigure: 'Please configure WebDAV settings in plugin preferences',
+		pleaseConfigure: 'Please configure webdav settings in plugin preferences',
 		connectionFailed: 'Connection failed',
 		listFailed: 'Failed to list directory',
 		refreshFailed: 'Refresh failed',
@@ -42,14 +42,14 @@ const en: LangPack = {
 		retryPrompt: 'Loading failed, click to retry',
 		refresh: 'Refresh',
 		sort: 'Sort',
-		sortByNameAsc: 'Name (A-Z)',
-		sortByNameDesc: 'Name (Z-A)',
-		sortByTypeAsc: 'Type (A-Z)',
-		sortByTypeDesc: 'Type (Z-A)',
-		sortBySizeAsc: 'Size (Small-Large)',
-		sortBySizeDesc: 'Size (Large-Small)',
-		sortByDateAsc: 'Date (Old-New)',
-		sortByDateDesc: 'Date (New-Old)',
+		sortByNameAsc: 'Name (a-z)',
+		sortByNameDesc: 'Name (z-a)',
+		sortByTypeAsc: 'Type (a-z)',
+		sortByTypeDesc: 'Type (z-a)',
+		sortBySizeAsc: 'Size (small-large)',
+		sortBySizeDesc: 'Size (large-small)',
+		sortByDateAsc: 'Date (old-new)',
+		sortByDateDesc: 'Date (new-old)',
 	}
 };
 

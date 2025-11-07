@@ -97,15 +97,13 @@ export class WebDAVExplorerView extends View {
             } else {
                 throw new Error('Failed to initialize WebDAV client');
             }
-        } catch (err: any) {
-            const msg = err.message || String(err);
-            new Notice(`❌ ${t.view.connectionFailed}: ${msg.substring(0, 100)}...`);
+        } catch {
 
+            new Notice(`❌ ${t.view.connectionFailed}`);
             // 设置连接失败状态
             this.isConnectionFailed = true;
-
             // 显示连接失败界面，但保留视图结构
-            this.showConnectionFailed(msg);
+            this.showConnectionFailed(t.view.connectionFailed);
         }
     }
 
@@ -787,7 +785,7 @@ export class WebDAVExplorerView extends View {
 
         // 配置服务器按钮
         const configureButton = messageEl.createEl('button', {
-            text: 'Configure Servers',
+            text: 'Configure servers',
             cls: 'mod-cta'
         });
 
