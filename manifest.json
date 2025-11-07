@@ -3,7 +3,7 @@
   "name": "WebDAV Explorer",
   "version": "1.0.0",
   "description": "WebDAV Server Explorer.",
-  "author": "sunmagicshow",
+  "author": "蓝星晓夜",
   "minAppVersion": "1.7.4",
   "isDesktopOnly": true,
   "fundingUrl": ""
