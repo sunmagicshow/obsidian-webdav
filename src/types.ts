@@ -22,15 +22,6 @@ export const DEFAULT_SETTINGS: WebDAVSettings = {
   servers: [],
 };
 
-// 文件项接口
-export interface WebDAVFile {
-  filename: string;
-  basename: string;
-  lastmod: string;
-  size: number;
-  type: 'file' | 'directory';
-}
-
 // 排序相关类型
 export type SortField = 'name' | 'type' | 'size' | 'date';
 export type SortOrder = 'asc' | 'desc';
