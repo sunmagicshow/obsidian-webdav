@@ -46,7 +46,7 @@ export class WebDAVClient {
       return result;
     } else {
       // 如果是 ResponseDataDetailed 类型，返回 data 属性
-      return (result as ResponseDataDetailed<FileStat[]>).data;
+      return result.data;
     }
   }
 

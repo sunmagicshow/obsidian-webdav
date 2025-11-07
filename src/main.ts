@@ -179,14 +179,14 @@ export default class WebDAVPlugin extends Plugin {
 	}
 
 	// 插件卸载清理
-	async onunload() {
+	onunload() {
 		const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER);
 
 		// 卸载所有视图
 		for (const leaf of leaves) {
 			if (leaf.view && typeof leaf.view.onunload === 'function') {
 				try {
-					await leaf.view.onunload();
+					leaf.view.onunload();
 				} catch (e) {
 					console.error('Error unloading view:', e);
 				}
