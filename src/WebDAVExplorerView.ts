@@ -391,8 +391,6 @@ export class WebDAVExplorerView extends View {
 
         const t = this.plugin.i18n();
         try {
-            const filename = remotePath.split('/').pop() || '';
-
             // 获取最终URL（已经编码过的）
             const finalUrl = this.getFileFullUrl(remotePath);
 
@@ -502,10 +500,6 @@ export class WebDAVExplorerView extends View {
         const refreshContent = refreshButton.createEl('div', {cls: 'webdav-button-content'});
         const refreshIcon = refreshContent.createSpan({cls: 'webdav-refresh-icon'});
         setIcon(refreshIcon, 'refresh-cw');
-        const refreshText = refreshContent.createSpan({
-            cls: 'webdav-button-text',
-            text: this.plugin.i18n().view.refresh
-        });
         refreshButton.setAttribute('aria-label', 'Refresh');
         refreshButton.onclick = async () => {
             await this.refresh();
@@ -515,18 +509,15 @@ export class WebDAVExplorerView extends View {
         this.sortButton = actionsContainer.createEl('div', {cls: 'webdav-button'});
         const sortContent = this.sortButton.createEl('div', {cls: 'webdav-button-content'});
         this.sortIconEl = sortContent.createSpan({cls: 'webdav-sort-icon'});
-        const sortText = sortContent.createSpan({
-            cls: 'webdav-button-text',
-            text: this.plugin.i18n().view.sort,
-        });
+
         this.updateSortIcon();
         this.sortButton.setAttribute('aria-label', 'Sort files');
         this.sortButton.onclick = (evt) => {
             this.showSortMenu(evt);
         };
 
-        // 面包屑导航容器
-        const breadcrumbContainer = headerEl.createEl('div', {cls: 'webdav-breadcrumb-container'});
+        // // 面包屑导航容器
+        // const breadcrumbContainer = headerEl.createEl('div', {cls: 'webdav-breadcrumb-container'});
 
         // 文件列表容器
         const listContainer = this.containerEl.createEl('div', {cls: 'file-list-container'});
@@ -547,16 +538,16 @@ export class WebDAVExplorerView extends View {
         const t = this.plugin.i18n();
 
         // 错误图标和标题
-        const errorTitle = messageEl.createEl('p', {
-            text: `❌ ${t.view.connectionFailed}`,
-            cls: 'webdav-error-title'
-        });
-
-        // 错误详情
-        const errorDetails = messageEl.createEl('p', {
-            text: errorMessage,
-            cls: 'webdav-error-details'
-        });
+        // const errorTitle = messageEl.createEl('p', {
+        //     text: `❌ ${t.view.connectionFailed}`,
+        //     cls: 'webdav-error-title'
+        // });
+        //
+        // // 错误详情
+        // const errorDetails = messageEl.createEl('p', {
+        //     text: errorMessage,
+        //     cls: 'webdav-error-details'
+        // });
 
         // 刷新按钮
         const refreshButton = messageEl.createEl('button', {
@@ -868,7 +859,7 @@ export class WebDAVExplorerView extends View {
 
             // 创建图标和名称的容器
             const iconSpan = item.createSpan({cls: 'file-icon'});
-            const nameSpan = item.createSpan({cls: 'file-name', text: this.getFileName(file)});
+            // const nameSpan = item.createSpan({cls: 'file-name', text: this.getFileName(file)});
 
             // 设置图标
             if (file.type === 'directory') {
