@@ -1,4 +1,4 @@
-import { createClient, FileStat, ResponseDataDetailed } from 'webdav';
+import { createClient, FileStat } from 'webdav';
 import { WebDAVServer } from './types';
 
 export class WebDAVClient {
@@ -45,7 +45,6 @@ export class WebDAVClient {
     if (Array.isArray(result)) {
       return result;
     } else {
-      // 如果是 ResponseDataDetailed 类型，返回 data 属性
       return result.data;
     }
   }

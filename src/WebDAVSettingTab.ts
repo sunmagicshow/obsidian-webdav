@@ -11,7 +11,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
-    display(): void {
+    display = (): void => {
         const {containerEl} = this;
         const {i18n} = this.plugin;
         const t = i18n();
@@ -192,7 +192,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
             });
     }
 
-    private updateDefaultServerDropdown() {
+    private updateDefaultServerDropdown = () => {
         if (!this.defaultServerDropdown) return;
         const currentValue = this.defaultServerDropdown.getValue();
         this.defaultServerDropdown.selectEl.empty();
@@ -209,7 +209,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         }
     }
 
-    private getServerDescription(server: WebDAVServer): string {
+    private getServerDescription = (server: WebDAVServer): string => {
         const parts = [];
         parts.push(`ID: ${server.id}`);
         if (server.remoteDir && server.remoteDir !== '/') {
@@ -221,7 +221,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         return parts.length > 0 ? parts.join(' | ') : 'No remote directory configured';
     }
 
-    private generateId(): string {
+    private generateId = (): string => {
         return 'server_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
     }
 }

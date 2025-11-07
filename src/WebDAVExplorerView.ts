@@ -296,9 +296,7 @@ export class WebDAVExplorerView extends View {
                     await this.listDirectory(parentPath);
                 };
             }
-
-            // 空目录处理
-            // 空目录处理 - 只有当没有文件且不是根目录时才显示空文件夹提示
+                        // 空目录处理 - 只有当没有文件且不是根目录时才显示空文件夹提示
             if (files.length === 0) {
                 // 如果当前目录不是根目录且已经显示了".."项，则不显示空文件夹提示
                 if (this.currentPath === this.rootPath) {
@@ -871,7 +869,7 @@ export class WebDAVExplorerView extends View {
 
             // 创建图标和名称的容器
             const iconSpan = item.createSpan({cls: 'file-icon'});
-            const nameSpan = item.createSpan({cls: 'file-name', text: this.getFileName(file)});
+            item.createSpan({cls: 'file-name', text: this.getFileName(file)});
 
             // 设置图标
             if (file.type === 'directory') {
@@ -991,7 +989,7 @@ export class WebDAVExplorerView extends View {
             }
 
             return timestamp;
-        } catch (error) {
+        } catch  {
             return 0;
         }
     }
