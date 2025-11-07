@@ -412,7 +412,7 @@ export class WebDAVExplorerView extends View {
     }
 
     // 视图卸载清理
-    async onunload() {
+    onunload() {
         this.client = null;
         this.selectedItem = null;
         this.currentServer = null;
@@ -422,7 +422,7 @@ export class WebDAVExplorerView extends View {
         }
     }
 
-    async refresh() {
+    refresh() {
 // 防抖处理，避免频繁刷新
         if (this.refreshDebounceTimer) {
             clearTimeout(this.refreshDebounceTimer);
@@ -865,7 +865,7 @@ private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
 
             // 创建图标和名称的容器
             const iconSpan = item.createSpan({cls: 'file-icon'});
-            // const nameSpan = item.createSpan({cls: 'file-name', text: this.getFileName(file)});
+            const nameSpan = item.createSpan({cls: 'file-name', text: this.getFileName(file)});
 
             // 设置图标
             if (file.type === 'directory') {
@@ -896,13 +896,13 @@ private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
                 // 文件双击事件 - 打开文件
                 item.ondblclick = async () => {
                     this.selectItem(item);
-                    await this.openFileWithWeb(file.filename);
+                    this.openFileWithWeb(file.filename);
                 };
 
                 // 文件拖拽事件
                 item.ondragstart = async (event) => {
                     this.selectItem(item);
-                    const finalUrl = await this.getFileFullUrl(file.filename);
+                    const finalUrl = this.getFileFullUrl(file.filename);
 
                     event.dataTransfer?.setData('text/plain', file.filename);
                     event.dataTransfer?.setData('text/uri-list', finalUrl);

@@ -219,28 +219,16 @@ export function saveLocaleSetting(app: App, locale: Locale): void {
 }
 
 // 设置语言
-export function setI18n(locale: Locale): void;
-export function setI18n(locale: string): void;
 export function setI18n(locale: Locale | string): void {
-	if (isValidLocale(locale)) {
-		currentLocale = locale;
-	} else {
-		console.warn(`Unsupported locale: ${locale}, falling back to default`);
-		currentLocale = 'en';
-	}
+    if (isValidLocale(locale)) {
+        currentLocale = locale;
+    } else {
+        console.warn(`Unsupported locale: ${locale}, falling back to default`);
+        currentLocale = 'en';
+    }
 }
 
 // 获取当前语言包
 export function i18n(): LangPack {
 	return locales[currentLocale];
 }
-//
-// // 获取当前语言
-// export function getCurrentLocale(): Locale {
-// 	return currentLocale;
-// }
-
-// // 获取所有支持的语言
-// export function getSupportedLocales(): Locale[] {
-// 	return Object.keys(locales) as Locale[];
-// }
