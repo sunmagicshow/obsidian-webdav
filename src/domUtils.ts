@@ -4,7 +4,7 @@ export class DomUtils {
   static withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new Error('Request timeout'));
+        reject(new Error('Request timeout')); // 使用 Error 对象
       }, timeoutMs);
 
       promise.then(

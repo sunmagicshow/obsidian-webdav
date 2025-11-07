@@ -827,24 +827,30 @@ export class WebDAVExplorerView extends View {
     }
 
     // 超时控制包装器
-    private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-        return new Promise((resolve, reject) => {
-            const timeoutId = setTimeout(() => {
-                reject(new Error('Request timeout'));
-            }, timeoutMs);
+// 超时控制包装器
+private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+            reject(new Error('Request timeout')); // 确保使用 Error 对象
+        }, timeoutMs);
 
-            promise.then(
-                (result) => {
-                    clearTimeout(timeoutId);
-                    resolve(result);
-                },
-                (error) => {
-                    clearTimeout(timeoutId);
+        promise.then(
+            (result) => {
+                clearTimeout(timeoutId);
+                resolve(result);
+            },
+            (error) => {
+                clearTimeout(timeoutId);
+                // 确保错误是 Error 对象，如果不是则包装
+                if (error instanceof Error) {
                     reject(error);
+                } else {
+                    reject(new Error(String(error)));
                 }
-            );
-        });
-    }
+            }
+        );
+    });
+}
 
     // 渲染文件列表
 // 渲染文件列表 - 使用排序后的文件
