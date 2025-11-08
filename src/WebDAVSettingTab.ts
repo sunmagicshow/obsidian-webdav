@@ -210,15 +210,16 @@ export class WebDAVSettingTab extends PluginSettingTab {
     }
 
     private getServerDescription = (server: WebDAVServer): string => {
+        const t = this.plugin.i18n(); // 获取 i18n 实例
         const parts = [];
         parts.push(`ID: ${server.id}`);
         if (server.remoteDir && server.remoteDir !== '/') {
-            parts.push(`Dir: ${server.remoteDir}`);
+            parts.push(`${t.settings.remoteDir.name}: ${server.remoteDir}`);
         }
         if (server.isDefault) {
-            parts.push('(Default)');
+            parts.push(`(${t.settings.defaultServer})`);
         }
-        return parts.length > 0 ? parts.join(' | ') : 'No remote directory configured';
+        return parts.length > 0 ? parts.join(' | ') : t.settings.noServers;
     }
 
     private generateId = (): string => {

@@ -1,7 +1,8 @@
 import {Notice, Plugin} from 'obsidian';
 import {WebDAVSettingTab} from './WebDAVSettingTab';
 import {WebDAVExplorerView} from './WebDAVExplorerView';
-import {initI18n, setI18n, i18n, LangPack, Locale, saveLocaleSetting, isValidLocale} from './i18n';
+import { initI18n, i18n } from './i18n';
+import type { LangPack } from './i18n';
 import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 
 export default class WebDAVPlugin extends Plugin {
@@ -15,7 +16,7 @@ export default class WebDAVPlugin extends Plugin {
     async onload() {
         await this.loadSettings();
 
-        // 初始化语言设置 - 使用新的初始化方法
+        // 初始化语言设置
         initI18n(this.app);
 
         // 注册视图
@@ -80,102 +81,53 @@ export default class WebDAVPlugin extends Plugin {
     }
 
     // 激活视图
-    async activateView() {
-        const {workspace} = this.app;
-        const t = this.i18n();
+// 激活视图
+async activateView() {
+    const {workspace} = this.app;
+    const t = this.i18n();
 
-        // 总是使用默认服务器，忽略当前选中的服务器
-        const defaultServer = this.getDefaultServer();
-        if (!defaultServer) {
-            new Notice(t.settings.serverListEmpty);
-            return;
-        }
-
-        // 设置当前服务器为默认服务器
-        this.settings.currentServerId = defaultServer.id;
-        await this.saveSettings();
-
-        // 查找已存在的视图
-        let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
-
-        if (leaf) {
-            workspace.revealLeaf(leaf);
-            // 强制刷新视图，使用默认服务器
-            if (leaf.view instanceof WebDAVExplorerView) {
-                // 完全重新初始化视图
-                await leaf.view.onunload();
-                await leaf.view.onOpen();
-            }
-            return;
-        }
-
-        // 创建新视图
-        const rightLeaf = workspace.getRightLeaf(false);
-        if (rightLeaf) {
-            await rightLeaf.setViewState({
-                type: VIEW_TYPE_WEBDAV_EXPLORER,
-                active: true,
-            });
-            workspace.revealLeaf(rightLeaf);
-        } else {
-            const newLeaf = workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
-            await newLeaf.setViewState({
-                type: VIEW_TYPE_WEBDAV_EXPLORER,
-                active: true,
-            });
-            workspace.revealLeaf(newLeaf);
-        }
+    // 总是使用默认服务器，忽略当前选中的服务器
+    const defaultServer = this.getDefaultServer();
+    if (!defaultServer) {
+        new Notice(t.settings.serverListEmpty);
+        return;
     }
 
-    // 可选：添加一个方法来激活特定服务器的视图（用于其他场景）
-    async activateViewWithServer(serverId?: string) {
-        const {workspace} = this.app;
-        const t = this.i18n();
+    // 设置当前服务器为默认服务器
+    this.settings.currentServerId = defaultServer.id;
+    await this.saveSettings();
 
-        // 设置当前服务器
-        if (serverId) {
-            this.settings.currentServerId = serverId;
-            await this.saveSettings();
+    // 查找已存在的视图
+    let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
+
+    if (leaf) {
+        await workspace.revealLeaf(leaf);  // 添加 await
+        // 强制刷新视图，使用默认服务器
+        if (leaf.view instanceof WebDAVExplorerView) {
+            // 完全重新初始化视图
+            leaf.view.onunload();
+            await leaf.view.onOpen();
         }
-
-        // 检查是否有可用的服务器
-        const currentServer = this.getCurrentServer();
-        if (!currentServer) {
-            new Notice(t.settings.serverListEmpty);
-            return;
-        }
-
-        // 查找已存在的视图
-        let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
-
-        if (leaf) {
-            workspace.revealLeaf(leaf);
-            // 强制刷新视图，包括重新初始化
-            if (leaf.view instanceof WebDAVExplorerView) {
-                // 完全重新初始化视图
-                await leaf.view.onunload();
-                await leaf.view.onOpen();
-            }
-            return;
-        }
-
-        // 创建新视图
-        const rightLeaf = workspace.getRightLeaf(false);
-        if (rightLeaf) {
-            await rightLeaf.setViewState({
-                type: VIEW_TYPE_WEBDAV_EXPLORER,
-                active: true,
-            });
-            workspace.revealLeaf(rightLeaf);
-        } else {
-            const newLeaf = workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
-            await newLeaf.setViewState({
-                type: VIEW_TYPE_WEBDAV_EXPLORER,
-                active: true,
-            });
-            workspace.revealLeaf(newLeaf);
-        }
+        return;
     }
+
+    // 创建新视图
+    const rightLeaf = workspace.getRightLeaf(false);
+    if (rightLeaf) {
+        await rightLeaf.setViewState({
+            type: VIEW_TYPE_WEBDAV_EXPLORER,
+            active: true,
+        });
+        await workspace.revealLeaf(rightLeaf);  // 添加 await
+    } else {
+        const newLeaf = workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
+        await newLeaf.setViewState({
+            type: VIEW_TYPE_WEBDAV_EXPLORER,
+            active: true,
+        });
+        await workspace.revealLeaf(newLeaf);  // 添加 await
+    }
+}
 
     // 注册拖拽功能（空实现）
     registerDragAndDrop() {
@@ -214,12 +166,21 @@ export default class WebDAVPlugin extends Plugin {
     }
 
     // 保存语言设置到插件存储（供设置面板调用）
-    public setLocale(locale: Locale): void {
-        if (isValidLocale(locale)) {
-            setI18n(locale);
-            saveLocaleSetting(this.app, locale);
-            saveLocaleSetting(this.app, locale);
-            // 可以在这里添加界面刷新的逻辑
-        }
-    }
+    // public setLocale(locale: Locale): void {
+    //     if (isValidLocale(locale)) {
+    //         setI18n(locale);
+    //         saveLocaleSetting(this.app, locale);
+    //         // 可以在这里添加界面刷新的逻辑
+    //     }
+    // }
+
+    // // 获取当前语言（可选，用于设置面板）
+    // public getCurrentLocale(): Locale {
+    //     return getCurrentLocale();
+    // }
+    //
+    // // 获取支持的语言列表（可选，用于设置面板）
+    // public getSupportedLocales(): Locale[] {
+    //     return getSupportedLocales();
+    // }
 }

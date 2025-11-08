@@ -246,7 +246,7 @@ export class WebDAVExplorerView extends View {
         // 显示加载状态
         const loadingEl = fileList.createEl('div', {
             cls: 'file-item loading',
-            text: '⏳ ' + (t.view.loading || 'Loading...')
+            text: '⏳ ' + t.view.loading
         });
 
         try {
@@ -294,7 +294,7 @@ export class WebDAVExplorerView extends View {
                     await this.listDirectory(parentPath);
                 };
             }
-                        // 空目录处理 - 只有当没有文件且不是根目录时才显示空文件夹提示
+            // 空目录处理 - 只有当没有文件且不是根目录时才显示空文件夹提示
             if (files.length === 0) {
                 // 如果当前目录不是根目录且已经显示了".."项，则不显示空文件夹提示
                 if (this.currentPath === this.rootPath) {
@@ -470,6 +470,8 @@ export class WebDAVExplorerView extends View {
         this.containerEl.empty();
         this.containerEl.addClass('webdav-explorer-view');
         this.isConnectionFailed = false;
+        //获取i18n实例
+        const t = this.plugin.i18n();
 
         // 创建头部区域
         const headerEl = this.containerEl.createEl('div', {cls: 'webdav-header'});
@@ -502,7 +504,7 @@ export class WebDAVExplorerView extends View {
         const refreshContent = refreshButton.createEl('div', {cls: 'webdav-button-content'});
         const refreshIcon = refreshContent.createSpan({cls: 'webdav-refresh-icon'});
         setIcon(refreshIcon, 'refresh-cw');
-        refreshButton.setAttribute('aria-label', 'Refresh');
+        refreshButton.setAttribute('aria-label', t.view.refresh);
         refreshButton.onclick = async () => {
             await this.refresh();
         };
@@ -681,11 +683,12 @@ export class WebDAVExplorerView extends View {
 // 更新排序图标
     private updateSortIcon() {
         if (!this.sortIconEl) return;
-
+        //获取i18n实例
+        const t = this.plugin.i18n();
         this.sortIconEl.empty();
 
         let iconName = 'arrow-up-down';
-        let tooltip = `Sort by: ${this.sortField}, Order: ${this.sortOrder}`;
+        let tooltip = `${t.view.sort}: ${this.sortField}, ${this.sortOrder}`;
 
         iconName = this.sortOrder === 'asc' ? 'arrow-up-narrow-wide' : 'arrow-down-wide-narrow';
 
@@ -785,7 +788,7 @@ export class WebDAVExplorerView extends View {
 
         // 配置服务器按钮
         const configureButton = messageEl.createEl('button', {
-            text: 'Configure servers',
+            text: t.settings.title,
             cls: 'mod-cta'
         });
 
@@ -831,9 +834,11 @@ export class WebDAVExplorerView extends View {
     // 超时控制包装器
 // 超时控制包装器
     private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+        //获取i18n实例
+        const t = this.plugin.i18n();
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
-                reject(new Error('Request timeout')); // 确保使用 Error 对象
+                reject(new Error(t.view.connectionFailed));
             }, timeoutMs);
 
             promise.then(
@@ -896,13 +901,13 @@ export class WebDAVExplorerView extends View {
                 };
 
                 // 文件双击事件 - 打开文件
-                item.ondblclick = async () => {
+                item.ondblclick = () => {
                     this.selectItem(item);
                     this.openFileWithWeb(file.filename);
                 };
 
                 // 文件拖拽事件
-                item.ondragstart = async (event) => {
+                item.ondragstart = (event) => {
                     this.selectItem(item);
                     const finalUrl = this.getFileFullUrl(file.filename);
 
@@ -987,7 +992,7 @@ export class WebDAVExplorerView extends View {
             }
 
             return timestamp;
-        } catch  {
+        } catch {
             return 0;
         }
     }

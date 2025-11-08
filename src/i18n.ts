@@ -1,5 +1,3 @@
-// src/i18n.ts
-
 import { App } from 'obsidian';
 
 // 定义语言类型
@@ -59,33 +57,34 @@ export interface LangPack {
 	};
 }
 
+// 英文语言包
 const en: LangPack = {
-	displayName: 'WebDAV Explorer',
+	displayName: 'WebDAV explorer',
 	settings: {
-		title: 'WebDAV Settings',
-		addServer: 'Add WebDAV Server',
-		noServers: 'No WebDAV servers configured. Click the "+" button to add one.',
+		title: 'WebDAV settings',
+		addServer: 'Add webdav server',
+		noServers: 'No webdav servers configured. Click the "+" button to add one.',
 		url: {
-			name: 'WebDAV Server URL',
-			desc: 'The full URL of your WebDAV server'
+			name: 'WebDAV server URL',
+			desc: 'The full URL of your webdav server'
 		},
 		username: 'Username',
 		password: 'Password',
 		remoteDir: {
-			name: 'Remote Directory',
+			name: 'Remote directory',
 			desc: 'Remote directory path (e.g., /notes)'
 		},
-		deleteServer: 'Delete Server',
-		defaultServer: 'Default Server',
-		defaultServerDesc: 'Select the default server to use when opening WebDAV Explorer',
+		deleteServer: 'Delete server',
+		defaultServer: 'Default server',
+		defaultServerDesc: 'Select the default server to use when opening webdav explorer',
 		noServersAvailable: 'No servers available',
-		serverName: 'Server Name',
+		serverName: 'Server name',
 		deleteNotice: 'Cannot delete the last server. At least one server is required.',
-		serverList: 'WebDAV Servers List',
-		serverListEmpty: 'Please configure at least one WebDAV server in settings',
+		serverList: 'WebDAV servers list',
+		serverListEmpty: 'Please configure at least one webdav server in settings',
 	},
 	view: {
-		pleaseConfigure: 'Please configure WebDAV settings in plugin preferences',
+		pleaseConfigure: 'Please configure webdav settings in plugin preferences',
 		connectionFailed: 'Connection failed',
 		listFailed: 'Failed to list directory',
 		refreshFailed: 'Refresh failed',
@@ -101,17 +100,18 @@ const en: LangPack = {
 		retryPrompt: 'Loading failed, click to retry',
 		refresh: 'Refresh',
 		sort: 'Sort',
-		sortByNameAsc: 'Name (A-Z)',
-		sortByNameDesc: 'Name (Z-A)',
-		sortByTypeAsc: 'Type (A-Z)',
-		sortByTypeDesc: 'Type (Z-A)',
-		sortBySizeAsc: 'Size (Small-Large)',
-		sortBySizeDesc: 'Size (Large-Small)',
-		sortByDateAsc: 'Date (Old-New)',
-		sortByDateDesc: 'Date (New-Old)',
+		sortByNameAsc: 'Name (a-z)',
+		sortByNameDesc: 'Name (z-a)',
+		sortByTypeAsc: 'Type (a-z)',
+		sortByTypeDesc: 'Type (z-a)',
+		sortBySizeAsc: 'Size (small-large)',
+		sortBySizeDesc: 'Size (large-small)',
+		sortByDateAsc: 'Date (old-new)',
+		sortByDateDesc: 'Date (new-old)',
 	}
 };
 
+// 中文语言包
 const zh: LangPack = {
 	displayName: 'Webdav 资源管理器',
 	settings: {
@@ -166,23 +166,13 @@ const zh: LangPack = {
 };
 
 // 所有语言包
-const locales = {
-	en,
-	zh
-};
-
-// 存储键名
-const LANGUAGE_STORAGE_KEY = 'webdav-plugin-language';
+const locales = { en, zh };
 
 // 当前语言
 let currentLocale: Locale = 'en';
 
-// 验证语言是否支持
-export function isValidLocale(locale: string): locale is Locale {
-	return locale === 'zh' || locale === 'en';
-}
 
-// 初始化语言设置（需要在插件初始化时调用）
+// 初始化语言设置
 export function initI18n(app: App): void {
 	currentLocale = getSystemLocale(app);
 }
@@ -190,18 +180,27 @@ export function initI18n(app: App): void {
 // 获取系统语言
 export function getSystemLocale(app: App): Locale {
 	try {
-		// 首先尝试从插件存储中读取
-		const storedLanguage = app.loadLocalStorage(LANGUAGE_STORAGE_KEY);
-		if (storedLanguage && isValidLocale(storedLanguage)) {
-			return storedLanguage;
+		// 通过界面文本检测语言
+		const languageIndicators = {
+			'zh': ['文件', '编辑', '查看', '设置', '帮助'],
+			'en': ['File', 'Edit', 'View', 'Settings', 'Help']
+		};
+
+		const bodyText = document.body.innerText;
+		for (const [lang, indicators] of Object.entries(languageIndicators)) {
+			for (const indicator of indicators) {
+				if (bodyText.includes(indicator)) {
+					return lang as Locale;
+				}
+			}
 		}
 
-		// 如果没有存储的值，使用浏览器语言
+		// 如果无法检测到 Obsidian 语言，使用浏览器语言作为后备
 		const browserLanguage = navigator.language || navigator.languages[0];
-
 		if (browserLanguage?.startsWith('zh')) {
 			return 'zh';
 		}
+
 		return 'en';
 	} catch (e) {
 		console.error('Failed to load locale setting:', e);
@@ -209,26 +208,8 @@ export function getSystemLocale(app: App): Locale {
 	}
 }
 
-// 保存语言设置到插件存储
-export function saveLocaleSetting(app: App, locale: Locale): void {
-	try {
-		app.saveLocalStorage(LANGUAGE_STORAGE_KEY, locale);
-	} catch (e) {
-		console.error('Failed to save locale setting:', e);
-	}
-}
-
-// 设置语言
-export function setI18n(locale: Locale | string): void {
-    if (isValidLocale(locale)) {
-        currentLocale = locale;
-    } else {
-        console.warn(`Unsupported locale: ${locale}, falling back to default`);
-        currentLocale = 'en';
-    }
-}
-
 // 获取当前语言包
 export function i18n(): LangPack {
 	return locales[currentLocale];
 }
+
