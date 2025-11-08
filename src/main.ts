@@ -29,7 +29,7 @@ export default class WebDAVPlugin extends Plugin {
         this.addSettingTab(new WebDAVSettingTab(this.app, this));
 
         // 添加ribbon图标
-        this.addRibbonIcon('cloud', 'WebDAV Explorer', () => {
+        this.addRibbonIcon('cloud', 'Webdav explorer', () => {
             this.activateView();
         });
 
