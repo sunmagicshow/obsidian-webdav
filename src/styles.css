@@ -18,13 +18,6 @@
 	font-size: 1.1em;
 }
 
-.webdav-error-details {
-	font-size: 0.9em !important;
-	color: var(--text-error) !important;
-	word-break: break-word;
-	max-width: 100%;
-}
-
 .webdav-explorer-view {
 	height: 100%;
 	display: flex;
@@ -93,46 +86,10 @@
 	color: var(--text-normal);
 }
 
-.webdav-button-content {
-	display: flex;
-	align-items: center;
-	gap: 4px;
-}
-
-.webdav-server-icon,
-.webdav-refresh-icon,
-.webdav-sort-icon {
-	display: flex;
-	align-items: center;
-	width: 16px;
-	height: 16px;
-}
-
-.webdav-button-text {
-	font-size: 0.8em;
-	color: var(--text-muted);
-	white-space: nowrap;
-	font-weight: 500;
-}
-
-.webdav-server-button:hover .webdav-button-text,
-.webdav-refresh-button:hover .webdav-button-text,
-.webdav-sort-button:hover .webdav-button-text {
-	color: var(--text-normal);
-}
-
 .webdav-actions-container {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-}
-
-.webdav-display-name {
-	font-size: 0.9em;
-	font-weight: 600;
-	color: var(--text-normal);
-	white-space: nowrap;
-	margin-left: 8px;
 }
 
 .webdav-breadcrumb-container {
@@ -318,27 +275,4 @@
 	margin: 0;
 	color: var(--text-muted);
 	font-size: 1.1em;
-}
-
-.webdav-no-servers {
-	text-align: center;
-	color: var(--text-muted);
-	font-style: italic;
-	padding: 20px;
-	border: 1px dashed var(--background-modifier-border);
-	border-radius: 8px;
-	margin: 10px 0;
-}
-
-.clickable-icon {
-	cursor: pointer;
-	transition: all 0.15s ease;
-}
-
-.clickable-icon:hover {
-	transform: scale(1.02);
-}
-
-.clickable-icon:active {
-	transform: scale(0.98);
 }
