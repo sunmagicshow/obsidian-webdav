@@ -25,3 +25,13 @@ export const DEFAULT_SETTINGS: WebDAVSettings = {
 // 排序相关类型
 export type SortField = 'name' | 'type' | 'size' | 'date';
 export type SortOrder = 'asc' | 'desc';
+
+// === 视图相关类型 ===
+export interface FileOperationResult {
+  success: boolean;
+  message?: string;
+  data?: any;
+}
+
+// 导出 FileStat 类型（可选，方便其他地方使用）
+export type { FileStat } from 'webdav';

@@ -1,7 +1,9 @@
 import {WorkspaceLeaf, View, Notice, Menu, MarkdownView, setIcon, App, PluginSettingTab} from 'obsidian';
 import WebDAVPlugin from './main';
 import {WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
-import {createClient, FileStat} from "webdav";
+import {FileStat} from 'webdav'; // 直接从 webdav 导入
+import {WebDAVClient} from './WebDAVClient'; // 导入客户端类
+
 
 interface AppWithSettings extends App {
     setting: {
@@ -13,7 +15,7 @@ interface AppWithSettings extends App {
 
 export class WebDAVExplorerView extends View {
     plugin: WebDAVPlugin;
-    client: any = null;
+    client: WebDAVClient | null = null;
     currentPath: string = '/';
     selectedItem: HTMLElement | null = null;
     rootPath: string = '/';
@@ -97,8 +99,8 @@ export class WebDAVExplorerView extends View {
             } else {
                 throw new Error('Failed to initialize WebDAV client');
             }
-        } catch {
-
+        } catch (error: unknown) {
+            console.error('Connection failed:', error);
             new Notice(`❌ ${t.view.connectionFailed}`);
             // 设置连接失败状态
             this.isConnectionFailed = true;
@@ -250,6 +252,9 @@ export class WebDAVExplorerView extends View {
         });
 
         try {
+            if (!this.client) {
+                throw new Error('WebDAV client is not initialized');
+            }
             // 获取目录内容（带超时控制）
             const files = await this.withTimeout<FileStat[]>(
                 this.client.getDirectoryContents(this.currentPath),
@@ -310,11 +315,11 @@ export class WebDAVExplorerView extends View {
                 this.renderFileList(fileList, files);
             }
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             loadingEl.remove();
 
             // 简化错误处理：只显示错误信息，不进行重试
-            const msg = err.message || String(err);
+            const msg = err instanceof Error ? err.message : String(err);
             console.error('WebDAV list directory error:', err);
             new Notice(`${t.view.listFailed}: ${msg.substring(0, 100)}...`);
 
@@ -406,9 +411,9 @@ export class WebDAVExplorerView extends View {
 
             new Notice(`✅ ${t.view.opening}`, 1000);
 
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('File open error:', err);
-            const errorMsg = err.message || String(err);
+            const errorMsg = err instanceof Error ? err.message : String(err);
             new Notice(`❌ ${t.view.openFailed}: ${errorMsg}`);
         }
     }
@@ -456,8 +461,8 @@ export class WebDAVExplorerView extends View {
 
                     return this.listDirectory(this.currentPath);
                 })
-                .catch((err: any) => {
-                    const msg = err.message || String(err);
+                .catch((err: unknown) => {
+                    const msg = err instanceof Error ? err.message : String(err);
                     new Notice(`❌ ${t.view.connectionFailed}: ${msg.substring(0, 100)}...`);
 
                     this.isConnectionFailed = true;
@@ -773,37 +778,34 @@ export class WebDAVExplorerView extends View {
     }
 
     // 初始化WebDAV客户端
-    private async initializeClient(): Promise<boolean> {
-        if (!this.currentServer) return false;
+// 初始化WebDAV客户端
+private async initializeClient(): Promise<boolean> {
+    if (!this.currentServer) return false;
 
-        const {url, username, password} = this.currentServer;
+    const {url, username, password} = this.currentServer;
 
-        if (!url || !username || !password) {
-            return false;
-        }
+    if (!url || !username || !password) {
+        return false;
+    }
 
-        try {
-            const authHeader = 'Basic ' + btoa(`${username}:${password}`);
+    try {
+        // 创建WebDAV客户端
+        this.client = new WebDAVClient(this.currentServer);
+        const success = await this.client.initialize();
 
-            // 创建WebDAV客户端
-            this.client = createClient(url, {
-                username,
-                password,
-                headers: {
-                    'Authorization': authHeader
-                }
-            });
-
+        if (success) {
             // 测试连接
             const testPath = this.getRootPath();
             await this.client.getDirectoryContents(testPath);
             return true;
-        } catch (err) {
-            console.error('Failed to initialize WebDAV client:', err);
-            this.client = null;
-            return false;
         }
+        return false;
+    } catch (err) {
+        console.error('Failed to initialize WebDAV client:', err);
+        this.client = null;
+        return false;
     }
+}
 
     // 超时控制包装器
 // 超时控制包装器
@@ -835,7 +837,7 @@ export class WebDAVExplorerView extends View {
 
     // 渲染文件列表
 // 渲染文件列表 - 使用排序后的文件
-    private renderFileList(fileList: HTMLElement, files: any[]) {
+    private renderFileList(fileList: HTMLElement, files: FileStat[]) {
         // 排序文件列表
         const sortedFiles = this.sortFiles(files);
 
@@ -846,7 +848,7 @@ export class WebDAVExplorerView extends View {
 
             // 创建图标和名称的容器
             const iconSpan = item.createSpan({cls: 'file-icon'});
-            item.createSpan({cls: 'file-name', text: this.getFileName(file)});
+            item.createSpan({cls: 'file-name', text: file.basename});
 
             // 设置图标
             if (file.type === 'directory') {
@@ -904,7 +906,7 @@ export class WebDAVExplorerView extends View {
     }
 
     // 文件排序方法
-    private sortFiles(files: any[]): any[] {
+    private sortFiles(files: FileStat[]): FileStat[] {
         return files.sort((a, b) => {
             // 首先按类型排序：文件夹在前，文件在后
             if (a.type === 'directory' && b.type !== 'directory') {
@@ -918,8 +920,8 @@ export class WebDAVExplorerView extends View {
 
             if (this.sortField === 'name') {
                 // 按名称排序
-                const nameA = this.getFileName(a).toLowerCase();
-                const nameB = this.getFileName(b).toLowerCase();
+                const nameA = a.basename.toLowerCase();
+                const nameB = b.basename.toLowerCase();
                 compareResult = nameA.localeCompare(nameB);
             } else if (this.sortField === 'type') {
                 // 按文件扩展名排序
@@ -929,8 +931,8 @@ export class WebDAVExplorerView extends View {
 
                 // 如果扩展名相同，按名称排序
                 if (compareResult === 0) {
-                    const nameA = this.getFileName(a).toLowerCase();
-                    const nameB = this.getFileName(b).toLowerCase();
+                    const nameA = a.basename.toLowerCase();
+                    const nameB = b.basename.toLowerCase();
                     compareResult = nameA.localeCompare(nameB);
                 }
             } else if (this.sortField === 'size') {
@@ -977,19 +979,6 @@ export class WebDAVExplorerView extends View {
     }
 
 
-    // 获取文件名（处理不同属性名）
-    private getFileName(file: any): string {
-        if (file.originalName) {
-            return file.originalName;
-        } else if (file.displayName) {
-            return file.displayName;
-        } else if (file.filename) {
-            const parts = file.filename.split('/');
-            return parts[parts.length - 1];
-        }
-        return file.basename;
-    }
-
 // 显示错误信息
     private showError(message: string) {
         const container = this.containerEl;
@@ -1002,4 +991,3 @@ export class WebDAVExplorerView extends View {
         });
     }
 }
-

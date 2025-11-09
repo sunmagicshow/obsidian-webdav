@@ -1,10 +1,10 @@
-import {App, PluginSettingTab, Setting, Notice} from 'obsidian';
+import {App, PluginSettingTab, Setting, Notice, DropdownComponent} from 'obsidian';
 import WebDAVPlugin from './main';
 import {WebDAVServer} from './types';
 
 export class WebDAVSettingTab extends PluginSettingTab {
     plugin: WebDAVPlugin;
-    private defaultServerDropdown: any = null;
+    private defaultServerDropdown: DropdownComponent | null = null;
 
     constructor(app: App, plugin: WebDAVPlugin) {
         super(app, plugin);
@@ -24,7 +24,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
                 .setName(t.settings.defaultServer)
                 .setDesc(t.settings.defaultServerDesc);
 
-            defaultServerSetting.addDropdown(dropdown => {
+            defaultServerSetting.addDropdown((dropdown: DropdownComponent) => {
                 this.defaultServerDropdown = dropdown;
                 dropdown.selectEl.addClass('webdav-dropdown');
                 this.updateDefaultServerDropdown();
@@ -192,13 +192,13 @@ export class WebDAVSettingTab extends PluginSettingTab {
             });
     }
 
-    private updateDefaultServerDropdown = () => {
+    private updateDefaultServerDropdown = (): void => {
         if (!this.defaultServerDropdown) return;
         const currentValue = this.defaultServerDropdown.getValue();
         this.defaultServerDropdown.selectEl.empty();
 
         this.plugin.settings.servers.forEach(server => {
-            this.defaultServerDropdown.addOption(server.id, server.name);
+            this.defaultServerDropdown!.addOption(server.id, server.name);
         });
 
         if (currentValue && this.plugin.settings.servers.some(s => s.id === currentValue)) {

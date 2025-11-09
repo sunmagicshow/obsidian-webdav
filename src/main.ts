@@ -1,8 +1,8 @@
 import {Notice, Plugin} from 'obsidian';
 import {WebDAVSettingTab} from './WebDAVSettingTab';
 import {WebDAVExplorerView} from './WebDAVExplorerView';
-import { initI18n, i18n } from './i18n';
-import type { LangPack } from './i18n';
+import {initI18n, i18n} from './i18n';
+import type {LangPack} from './i18n';
 import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 
 export default class WebDAVPlugin extends Plugin {
@@ -29,8 +29,8 @@ export default class WebDAVPlugin extends Plugin {
         this.addSettingTab(new WebDAVSettingTab(this.app, this));
 
         // 添加ribbon图标
-        this.addRibbonIcon('cloud', 'Webdav explorer', () => {
-            this.activateView();
+        this.addRibbonIcon('cloud', 'WebDAV explorer', () => {
+            void this.activateView();
         });
 
         this.registerDragAndDrop();
@@ -38,9 +38,7 @@ export default class WebDAVPlugin extends Plugin {
         // 如果有默认服务器，自动打开视图
         if (this.getDefaultServer()) {
             setTimeout(() => {
-                (async () => {
-                    await this.activateView();
-                })();
+                void this.activateView();
             }, 300);
         }
     }
@@ -82,52 +80,52 @@ export default class WebDAVPlugin extends Plugin {
 
     // 激活视图
 // 激活视图
-async activateView() {
-    const {workspace} = this.app;
-    const t = this.i18n();
+    async activateView() {
+        const {workspace} = this.app;
+        const t = this.i18n();
 
-    // 总是使用默认服务器，忽略当前选中的服务器
-    const defaultServer = this.getDefaultServer();
-    if (!defaultServer) {
-        new Notice(t.settings.serverListEmpty);
-        return;
-    }
-
-    // 设置当前服务器为默认服务器
-    this.settings.currentServerId = defaultServer.id;
-    await this.saveSettings();
-
-    // 查找已存在的视图
-    let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
-
-    if (leaf) {
-        await workspace.revealLeaf(leaf);  // 添加 await
-        // 强制刷新视图，使用默认服务器
-        if (leaf.view instanceof WebDAVExplorerView) {
-            // 完全重新初始化视图
-            leaf.view.onunload();
-            await leaf.view.onOpen();
+        // 总是使用默认服务器，忽略当前选中的服务器
+        const defaultServer = this.getDefaultServer();
+        if (!defaultServer) {
+            new Notice(t.settings.serverListEmpty);
+            return;
         }
-        return;
-    }
 
-    // 创建新视图
-    const rightLeaf = workspace.getRightLeaf(false);
-    if (rightLeaf) {
-        await rightLeaf.setViewState({
-            type: VIEW_TYPE_WEBDAV_EXPLORER,
-            active: true,
-        });
-        await workspace.revealLeaf(rightLeaf);  // 添加 await
-    } else {
-        const newLeaf = workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
-        await newLeaf.setViewState({
-            type: VIEW_TYPE_WEBDAV_EXPLORER,
-            active: true,
-        });
-        await workspace.revealLeaf(newLeaf);  // 添加 await
+        // 设置当前服务器为默认服务器
+        this.settings.currentServerId = defaultServer.id;
+        await this.saveSettings();
+
+        // 查找已存在的视图
+        let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
+
+        if (leaf) {
+            await workspace.revealLeaf(leaf);  // 添加 await
+            // 强制刷新视图，使用默认服务器
+            if (leaf.view instanceof WebDAVExplorerView) {
+                // 完全重新初始化视图
+                leaf.view.onunload();
+                await leaf.view.onOpen();
+            }
+            return;
+        }
+
+        // 创建新视图
+        const rightLeaf = workspace.getRightLeaf(false);
+        if (rightLeaf) {
+            await rightLeaf.setViewState({
+                type: VIEW_TYPE_WEBDAV_EXPLORER,
+                active: true,
+            });
+            await workspace.revealLeaf(rightLeaf);  // 添加 await
+        } else {
+            const newLeaf = workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
+            await newLeaf.setViewState({
+                type: VIEW_TYPE_WEBDAV_EXPLORER,
+                active: true,
+            });
+            await workspace.revealLeaf(newLeaf);  // 添加 await
+        }
     }
-}
 
     // 注册拖拽功能（空实现）
     registerDragAndDrop() {
