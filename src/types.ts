@@ -32,6 +32,3 @@ export interface FileOperationResult {
   message?: string;
   data?: any;
 }
-
-// 导出 FileStat 类型（可选，方便其他地方使用）
-export type { FileStat } from 'webdav';
