@@ -1,8 +1,8 @@
-import {WorkspaceLeaf, View, Notice, Menu, MarkdownView, setIcon, App, PluginSettingTab} from 'obsidian';
+import {WorkspaceLeaf, View, Notice, Menu, MarkdownView, setIcon} from 'obsidian';
 import WebDAVPlugin from './main';
-import {WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER,AppWithSettings} from './types';
-import {FileStat} from 'webdav'; // 直接从 webdav 导入
-import {WebDAVClient} from './WebDAVClient'; // 导入客户端类
+import {WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER, AppWithSettings} from './types';
+import {FileStat} from 'webdav';
+import {WebDAVClient} from './WebDAVClient';
 
 export class WebDAVExplorerView extends View {
     plugin: WebDAVPlugin;
@@ -62,7 +62,7 @@ export class WebDAVExplorerView extends View {
         await this.connectAndList();
     }
 
-// 连接服务器并列出目录
+    // 连接服务器并列出目录
     async connectAndList() {
         if (!this.currentServer) {
             this.showNoServerConfigured();
@@ -177,7 +177,7 @@ export class WebDAVExplorerView extends View {
         }
     }
 
-// 列出目录内容（简化版本，删除重试机制）
+    // 列出目录内容（简化版本，删除重试机制）
     async listDirectory(path: string) {
         if (!this.currentServer) return;
 
@@ -321,8 +321,6 @@ export class WebDAVExplorerView extends View {
         }
     }
 
-    // 列出目录内容（带重试机制）
-
     // 选中文件项
     selectItem(item: HTMLElement) {
         if (this.selectedItem) {
@@ -383,7 +381,7 @@ export class WebDAVExplorerView extends View {
         return `${baseUrl}${separator}${encodedPath}`;
     }
 
-// 使用系统应用打开文件
+    // 使用系统应用打开文件
     openFileWithWeb(remotePath: string) {
         if (!this.currentServer) return;
 
@@ -420,54 +418,56 @@ export class WebDAVExplorerView extends View {
         }
     }
 
-    refresh() {
-        // 防抖处理，避免频繁刷新
-        if (this.refreshDebounceTimer) {
-            clearTimeout(this.refreshDebounceTimer);
-        }
-
-        this.refreshDebounceTimer = window.setTimeout(() => {
-            if (!this.currentServer) {
-                this.showNoServerConfigured();
-                return;
+// 同时修改 refresh 方法，让它返回 Promise
+    async refresh(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (this.refreshDebounceTimer) {
+                clearTimeout(this.refreshDebounceTimer);
             }
 
-            const t = this.plugin.i18n();
-            new Notice(t.view.refreshing, 1000);
+            this.refreshDebounceTimer = window.setTimeout(async () => {
+                const t = this.plugin.i18n();
+                try {
+                    if (!this.currentServer) {
+                        this.showNoServerConfigured();
+                        resolve();
+                        return;
+                    }
 
-            // 使用 Promise 链式调用
-            this.initializeClient()
-                .then(success => {
+                    const t = this.plugin.i18n();
+                    new Notice(t.view.refreshing, 1000);
+
+                    const success = await this.initializeClient();
                     if (!success) {
                         throw new Error('Failed to initialize WebDAV client');
                     }
 
-                    // 重置连接状态
                     this.isConnectionFailed = false;
 
-                    // 如果当前显示的是连接失败界面，重建正常视图
                     if (this.containerEl.querySelector('.webdav-connection-failed')) {
                         this.buildNormalView();
                     }
 
-                    return this.listDirectory(this.currentPath);
-                })
-                .catch((err: unknown) => {
+                    await this.listDirectory(this.currentPath);
+                    resolve();
+                } catch (err: unknown) {
                     const msg = err instanceof Error ? err.message : String(err);
                     new Notice(`❌ ${t.view.connectionFailed}: ${msg.substring(0, 100)}...`);
 
                     this.isConnectionFailed = true;
                     this.showConnectionFailed();
-                });
-        }, 300);
+                    reject(err);
+                }
+            }, 300);
+        });
     }
 
-// 构建正常视图（头部和文件列表区域）
+    // 构建正常视图（头部和文件列表区域）
     private buildNormalView() {
         this.containerEl.empty();
         this.containerEl.addClass('webdav-explorer-view');
         this.isConnectionFailed = false;
-        //获取i18n实例
+        // 获取i18n实例
         const t = this.plugin.i18n();
 
         // 创建头部区域
@@ -503,7 +503,7 @@ export class WebDAVExplorerView extends View {
         setIcon(refreshIcon, 'refresh-cw');
         refreshButton.setAttribute('aria-label', t.view.refresh);
         refreshButton.onclick = async () => {
-            this.refresh();
+            await this.refresh();
         };
 
         // 排序按钮 - 带文字
@@ -525,7 +525,7 @@ export class WebDAVExplorerView extends View {
         listContainer.createEl('div', {cls: 'file-list'});
     }
 
-// 显示连接失败提示
+    // 显示连接失败提示
     private showConnectionFailed() {
         // 清空容器但保留基本结构
         const contentEl = this.containerEl.querySelector('.file-list-container') ||
@@ -550,7 +550,7 @@ export class WebDAVExplorerView extends View {
         };
     }
 
-// 显示排序菜单
+    // 显示排序菜单
     private showSortMenu(evt: MouseEvent) {
         const menu = new Menu();
         const t = this.plugin.i18n();
@@ -662,10 +662,10 @@ export class WebDAVExplorerView extends View {
         menu.showAtMouseEvent(evt);
     }
 
-// 更新排序图标
+    // 更新排序图标
     private updateSortIcon() {
         if (!this.sortIconEl) return;
-        //获取i18n实例
+        // 获取i18n实例
         const t = this.plugin.i18n();
         this.sortIconEl.empty();
 
@@ -729,7 +729,6 @@ export class WebDAVExplorerView extends View {
     }
 
     // 切换服务器
-// 切换服务器
     private async switchServer(serverId: string) {
         this.currentServer = this.plugin.getServerById(serverId);
         if (this.currentServer) {
@@ -769,39 +768,37 @@ export class WebDAVExplorerView extends View {
     }
 
     // 初始化WebDAV客户端
-// 初始化WebDAV客户端
-private async initializeClient(): Promise<boolean> {
-    if (!this.currentServer) return false;
+    private async initializeClient(): Promise<boolean> {
+        if (!this.currentServer) return false;
 
-    const {url, username, password} = this.currentServer;
+        const {url, username, password} = this.currentServer;
 
-    if (!url || !username || !password) {
-        return false;
-    }
-
-    try {
-        // 创建WebDAV客户端
-        this.client = new WebDAVClient(this.currentServer);
-        const success = await this.client.initialize();
-
-        if (success) {
-            // 测试连接
-            const testPath = this.getRootPath();
-            await this.client.getDirectoryContents(testPath);
-            return true;
+        if (!url || !username || !password) {
+            return false;
         }
-        return false;
-    } catch (err) {
-        console.error('Failed to initialize WebDAV client:', err);
-        this.client = null;
-        return false;
+
+        try {
+            // 创建WebDAV客户端
+            this.client = new WebDAVClient(this.currentServer);
+            const success = await this.client.initialize();
+
+            if (success) {
+                // 测试连接
+                const testPath = this.getRootPath();
+                await this.client.getDirectoryContents(testPath);
+                return true;
+            }
+            return false;
+        } catch (err) {
+            console.error('Failed to initialize WebDAV client:', err);
+            this.client = null;
+            return false;
+        }
     }
-}
 
     // 超时控制包装器
-// 超时控制包装器
     private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-        //获取i18n实例
+        // 获取i18n实例
         const t = this.plugin.i18n();
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
@@ -826,8 +823,7 @@ private async initializeClient(): Promise<boolean> {
         });
     }
 
-    // 渲染文件列表
-// 渲染文件列表 - 使用排序后的文件
+    // 渲染文件列表 - 使用排序后的文件
     private renderFileList(fileList: HTMLElement, files: FileStat[]) {
         // 排序文件列表
         const sortedFiles = this.sortFiles(files);
@@ -963,14 +959,14 @@ private async initializeClient(): Promise<boolean> {
         }
     }
 
-// 获取文件扩展名
+    // 获取文件扩展名
     private getFileExtension(filename: string): string {
         const parts = filename.split('.');
         return parts.length > 1 ? parts.pop() || '' : '';
     }
 
 
-// 显示错误信息
+    // 显示错误信息
     private showError(message: string) {
         const container = this.containerEl;
         const listContainer = container.createEl('div', {cls: 'file-list-container'});

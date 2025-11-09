@@ -26,7 +26,7 @@ export default class WebDAVPlugin extends Plugin {
         this.addSettingTab(new WebDAVSettingTab(this.app, this));
 
         // 添加ribbon图标
-        this.addRibbonIcon('cloud', 'WebDAV explorer', () => {
+        this.addRibbonIcon('cloud', 'WebDAV Explorer', () => {
             void this.activateView();
         });
 
