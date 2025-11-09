@@ -1,3 +1,5 @@
+import { App, PluginSettingTab } from 'obsidian';
+
 // === 常量定义 ===
 export const VIEW_TYPE_WEBDAV_EXPLORER = 'webdav-explorer';
 
@@ -27,4 +29,13 @@ export interface FileOperationResult {
   success: boolean;
   message?: string;
   data?: any;
+}
+
+// App 设置扩展接口
+export interface AppWithSettings extends App {
+    setting: {
+        open: () => void;
+        openTabById: (id: string) => void;
+        activeTab: PluginSettingTab | null;
+    };
 }

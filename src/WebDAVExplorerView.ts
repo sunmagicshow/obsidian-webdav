@@ -1,17 +1,8 @@
 import {WorkspaceLeaf, View, Notice, Menu, MarkdownView, setIcon, App, PluginSettingTab} from 'obsidian';
 import WebDAVPlugin from './main';
-import {WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
+import {WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER,AppWithSettings} from './types';
 import {FileStat} from 'webdav'; // 直接从 webdav 导入
 import {WebDAVClient} from './WebDAVClient'; // 导入客户端类
-
-
-interface AppWithSettings extends App {
-    setting: {
-        open: () => void;
-        openTabById: (id: string) => void;
-        activeTab: PluginSettingTab | null;
-    };
-}
 
 export class WebDAVExplorerView extends View {
     plugin: WebDAVPlugin;
