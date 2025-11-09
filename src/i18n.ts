@@ -1,4 +1,4 @@
-import { getLanguage, App } from 'obsidian';
+import { getLanguage } from 'obsidian';
 
 // 定义语言类型
 export type Locale = 'zh' | 'en';
@@ -185,9 +185,4 @@ export function getSystemLocale(): Locale {
 export function i18n(): LangPack {
     const currentLocale = getSystemLocale();
     return locales[currentLocale];
-}
-
-// 初始化函数（现在不需要 app 参数了）
-export function initI18n(): void {
-    const locale = getSystemLocale();
 }

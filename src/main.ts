@@ -1,7 +1,7 @@
 import {Notice, Plugin} from 'obsidian';
 import {WebDAVSettingTab} from './WebDAVSettingTab';
 import {WebDAVExplorerView} from './WebDAVExplorerView';
-import {initI18n, i18n} from './i18n';
+import {i18n} from './i18n';
 import type {LangPack} from './i18n';
 import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 
@@ -15,9 +15,6 @@ export default class WebDAVPlugin extends Plugin {
 
     async onload() {
         await this.loadSettings();
-
-        // 初始化语言设置
-        initI18n();
 
         // 注册视图
         this.registerView(
