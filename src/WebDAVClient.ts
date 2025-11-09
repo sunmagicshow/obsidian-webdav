@@ -47,10 +47,6 @@ export class WebDAVClient {
         }
     }
 
-    getClient(): ReturnType<typeof createClient> | null {
-        return this.client;
-    }
-
     destroy(): void {
         this.client = null;
     }
