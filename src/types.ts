@@ -22,10 +22,6 @@ export const DEFAULT_SETTINGS: WebDAVSettings = {
   servers: [],
 };
 
-// 排序相关类型
-export type SortField = 'name' | 'type' | 'size' | 'date';
-export type SortOrder = 'asc' | 'desc';
-
 // === 视图相关类型 ===
 export interface FileOperationResult {
   success: boolean;
