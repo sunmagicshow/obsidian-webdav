@@ -24,12 +24,6 @@ export const DEFAULT_SETTINGS: WebDAVSettings = {
   servers: [],
 };
 
-// === 视图相关类型 ===
-export interface FileOperationResult {
-  success: boolean;
-  message?: string;
-  data?: any;
-}
 
 // App 设置扩展接口
 export interface AppWithSettings extends App {

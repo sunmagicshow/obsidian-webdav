@@ -47,7 +47,4 @@ export class WebDAVClient {
         }
     }
 
-    destroy(): void {
-        this.client = null;
-    }
 }
