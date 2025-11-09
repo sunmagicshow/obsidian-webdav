@@ -17,7 +17,7 @@ export default class WebDAVPlugin extends Plugin {
         await this.loadSettings();
 
         // 初始化语言设置
-        initI18n(this.app);
+        initI18n();
 
         // 注册视图
         this.registerView(
