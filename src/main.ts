@@ -30,8 +30,6 @@ export default class WebDAVPlugin extends Plugin {
             void this.activateView();
         });
 
-        this.registerDragAndDrop();
-
         // 如果有默认服务器，自动打开视图
         if (this.getDefaultServer()) {
             setTimeout(() => {
@@ -122,11 +120,6 @@ export default class WebDAVPlugin extends Plugin {
             });
             await workspace.revealLeaf(newLeaf);  // 添加 await
         }
-    }
-
-    // 注册拖拽功能（空实现）
-    registerDragAndDrop() {
-        // 空实现
     }
 
     // 插件卸载清理
