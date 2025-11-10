@@ -13,8 +13,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     display(): void {
         const {containerEl} = this;
-        const {i18n} = this.plugin;
-        const t = i18n();
+        const t = this.plugin.i18n();
 
         containerEl.empty();
 
@@ -192,7 +191,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
             });
     }
 
-    private updateDefaultServerDropdown(): void {
+    private updateDefaultServerDropdown = (): void => {
         if (!this.defaultServerDropdown) return;
         const currentValue = this.defaultServerDropdown.getValue();
         this.defaultServerDropdown.selectEl.empty();
@@ -209,7 +208,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         }
     }
 
-    private getServerDescription(server: WebDAVServer): string {
+    private getServerDescription = (server: WebDAVServer): string => {
         const t = this.plugin.i18n(); // 获取 i18n 实例
         const parts = [];
         parts.push(`ID: ${server.id}`);
@@ -222,7 +221,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         return parts.length > 0 ? parts.join(' | ') : t.settings.noServers;
     }
 
-    private generateId(): string {
+    private generateId(this: void): string {
         return 'server_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
     }
 }

@@ -418,14 +418,14 @@ export class WebDAVExplorerView extends View {
         }
     }
 
-// 同时修改 refresh 方法，让它返回 Promise
+
     async refresh(): Promise<void> {
         return new Promise((resolve, reject) => {
             if (this.refreshDebounceTimer) {
                 clearTimeout(this.refreshDebounceTimer);
             }
 
-            this.refreshDebounceTimer = window.setTimeout(async () => {
+            const executeRefresh = async () => {
                 const t = this.plugin.i18n();
                 try {
                     if (!this.currentServer) {
@@ -434,7 +434,6 @@ export class WebDAVExplorerView extends View {
                         return;
                     }
 
-                    const t = this.plugin.i18n();
                     new Notice(t.view.refreshing, 1000);
 
                     const success = await this.initializeClient();
@@ -456,9 +455,15 @@ export class WebDAVExplorerView extends View {
 
                     this.isConnectionFailed = true;
                     this.showConnectionFailed();
-                    reject(err);
+                    if (err instanceof Error) {
+                        reject(err);
+                    } else {
+                        reject(new Error(String(err)));
+                    }
                 }
-            }, 300);
+            };
+
+            this.refreshDebounceTimer = window.setTimeout(executeRefresh, 300);
         });
     }
 
@@ -810,13 +815,13 @@ export class WebDAVExplorerView extends View {
                     clearTimeout(timeoutId);
                     resolve(result);
                 },
-                (error) => {
+                (err) => {
                     clearTimeout(timeoutId);
                     // 确保错误是 Error 对象，如果不是则包装
-                    if (error instanceof Error) {
-                        reject(error);
+                    if (err instanceof Error) {
+                        reject(err);
                     } else {
-                        reject(new Error(String(error)));
+                        reject(new Error(String(err)));
                     }
                 }
             );

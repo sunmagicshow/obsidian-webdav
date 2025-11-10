@@ -24,9 +24,9 @@ export default class WebDAVPlugin extends Plugin {
 
         // 添加设置面板
         this.addSettingTab(new WebDAVSettingTab(this.app, this));
-
+        const t = this.i18n();
         // 添加ribbon图标
-        this.addRibbonIcon('cloud', 'WebDAV Explorer', () => {
+        this.addRibbonIcon('cloud', t.displayName, () => {
             void this.activateView();
         });
 
@@ -74,7 +74,6 @@ export default class WebDAVPlugin extends Plugin {
     }
 
     // 激活视图
-// 激活视图
     async activateView() {
         const {workspace} = this.app;
         const t = this.i18n();
