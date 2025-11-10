@@ -412,11 +412,16 @@ export class WebDAVExplorerView extends View {
 
 
     refresh(): void {
-    if (this.refreshDebounceTimer) {
-        clearTimeout(this.refreshDebounceTimer);
+        if (this.refreshDebounceTimer) {
+            clearTimeout(this.refreshDebounceTimer);
+        }
+
+        this.refreshDebounceTimer = window.setTimeout(() => {
+            this.executeRefresh();
+        }, 300);
     }
 
-    this.refreshDebounceTimer = window.setTimeout(async () => {
+    private async executeRefresh(): Promise<void> {
         const t = this.plugin.i18n();
         try {
             if (!this.currentServer) {
@@ -442,8 +447,7 @@ export class WebDAVExplorerView extends View {
 
             this.showConnectionFailed();
         }
-    }, 300);
-}
+    }
 
     // 构建正常视图（头部和文件列表区域）
     private buildNormalView() {
@@ -484,7 +488,7 @@ export class WebDAVExplorerView extends View {
         const refreshIcon = refreshContent.createSpan({cls: 'webdav-refresh-icon'});
         setIcon(refreshIcon, 'refresh-cw');
         refreshButton.setAttribute('aria-label', t.view.refresh);
-        refreshButton.onclick = async () => {
+        refreshButton.onclick = () => {
             this.refresh();
         };
 
