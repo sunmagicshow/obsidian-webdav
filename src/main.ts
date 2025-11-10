@@ -151,23 +151,4 @@ export default class WebDAVPlugin extends Plugin {
     async saveSettings() {
         await this.saveData(this.settings);
     }
-
-    // 保存语言设置到插件存储（供设置面板调用）
-    // public setLocale(locale: Locale): void {
-    //     if (isValidLocale(locale)) {
-    //         setI18n(locale);
-    //         saveLocaleSetting(this.app, locale);
-    //         // 可以在这里添加界面刷新的逻辑
-    //     }
-    // }
-
-    // // 获取当前语言（可选，用于设置面板）
-    // public getCurrentLocale(): Locale {
-    //     return getCurrentLocale();
-    // }
-    //
-    // // 获取支持的语言列表（可选，用于设置面板）
-    // public getSupportedLocales(): Locale[] {
-    //     return getSupportedLocales();
-    // }
 }

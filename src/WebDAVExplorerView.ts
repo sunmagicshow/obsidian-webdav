@@ -22,7 +22,6 @@ export class WebDAVExplorerView extends View {
     private sortOrder: 'asc' | 'desc' = 'asc';
     private sortButton: HTMLElement | null = null;
     private sortIconEl: HTMLElement | null = null;
-    private isConnectionFailed: boolean = false;
     private refreshDebounceTimer: number | null = null;
 
     constructor(leaf: WorkspaceLeaf, plugin: WebDAVPlugin) {
@@ -46,9 +45,6 @@ export class WebDAVExplorerView extends View {
     async onOpen() {
         this.containerEl.empty();
         this.containerEl.addClass('webdav-explorer-view');
-
-        // 重置连接状态
-        this.isConnectionFailed = false;
 
         // 更新当前服务器
         this.currentServer = this.plugin.getCurrentServer();
@@ -79,8 +75,6 @@ export class WebDAVExplorerView extends View {
         }
 
         try {
-            // 重置连接状态
-            this.isConnectionFailed = false;
 
             const success = await this.initializeClient();
             if (success) {
@@ -93,8 +87,6 @@ export class WebDAVExplorerView extends View {
         } catch (error: unknown) {
             console.error('Connection failed:', error);
             new Notice(`❌ ${t.view.connectionFailed}`);
-            // 设置连接失败状态
-            this.isConnectionFailed = true;
             // 显示连接失败界面，但保留视图结构
             this.showConnectionFailed();
         }
@@ -419,59 +411,44 @@ export class WebDAVExplorerView extends View {
     }
 
 
-    async refresh(): Promise<void> {
-        return new Promise((resolve, reject) => {
-            if (this.refreshDebounceTimer) {
-                clearTimeout(this.refreshDebounceTimer);
+    refresh(): void {
+    if (this.refreshDebounceTimer) {
+        clearTimeout(this.refreshDebounceTimer);
+    }
+
+    this.refreshDebounceTimer = window.setTimeout(async () => {
+        const t = this.plugin.i18n();
+        try {
+            if (!this.currentServer) {
+                this.showNoServerConfigured();
+                return;
             }
 
-            const executeRefresh = async () => {
-                const t = this.plugin.i18n();
-                try {
-                    if (!this.currentServer) {
-                        this.showNoServerConfigured();
-                        resolve();
-                        return;
-                    }
+            new Notice(t.view.refreshing, 1000);
 
-                    new Notice(t.view.refreshing, 1000);
+            const success = await this.initializeClient();
+            if (!success) {
+                throw new Error('Failed to initialize WebDAV client');
+            }
 
-                    const success = await this.initializeClient();
-                    if (!success) {
-                        throw new Error('Failed to initialize WebDAV client');
-                    }
+            if (this.containerEl.querySelector('.webdav-connection-failed')) {
+                this.buildNormalView();
+            }
 
-                    this.isConnectionFailed = false;
+            await this.listDirectory(this.currentPath);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            new Notice(`❌ ${t.view.connectionFailed}: ${msg.substring(0, 100)}...`);
 
-                    if (this.containerEl.querySelector('.webdav-connection-failed')) {
-                        this.buildNormalView();
-                    }
-
-                    await this.listDirectory(this.currentPath);
-                    resolve();
-                } catch (err: unknown) {
-                    const msg = err instanceof Error ? err.message : String(err);
-                    new Notice(`❌ ${t.view.connectionFailed}: ${msg.substring(0, 100)}...`);
-
-                    this.isConnectionFailed = true;
-                    this.showConnectionFailed();
-                    if (err instanceof Error) {
-                        reject(err);
-                    } else {
-                        reject(new Error(String(err)));
-                    }
-                }
-            };
-
-            this.refreshDebounceTimer = window.setTimeout(executeRefresh, 300);
-        });
-    }
+            this.showConnectionFailed();
+        }
+    }, 300);
+}
 
     // 构建正常视图（头部和文件列表区域）
     private buildNormalView() {
         this.containerEl.empty();
         this.containerEl.addClass('webdav-explorer-view');
-        this.isConnectionFailed = false;
         // 获取i18n实例
         const t = this.plugin.i18n();
 
@@ -508,7 +485,7 @@ export class WebDAVExplorerView extends View {
         setIcon(refreshIcon, 'refresh-cw');
         refreshButton.setAttribute('aria-label', t.view.refresh);
         refreshButton.onclick = async () => {
-            await this.refresh();
+            this.refresh();
         };
 
         // 排序按钮 - 带文字
@@ -745,7 +722,6 @@ export class WebDAVExplorerView extends View {
             this.currentPath = '/';
             this.rootPath = '/';
             this.selectedItem = null;
-            this.isConnectionFailed = false;
 
             // 重新连接 - 这会重建视图
             await this.connectAndList();
