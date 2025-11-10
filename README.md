@@ -4,8 +4,8 @@ A WebDAV plugin for generating links by drag-and-drop and opening files by doubl
 ![image.png](asset/setting.png)
 
 ## Features
-##### Browse the files and folders of your Obsidian vault using WebDAV protocol.
-##### Pull and drag files into Obsidian to generate links.
-##### Preview Videos and Images Directly (Videos need plugin: Media extended)
+##### Browse the files and folders of your obsidian vault using webDAV protocol.
+##### Pull and drag files into obsidian to generate links.
+##### Preview videos and images directly (Videos need plugin: Media extended)
 ##### Double click to open the file in Obsidian browser.
 ![demo.gif](asset/demo.gif)
