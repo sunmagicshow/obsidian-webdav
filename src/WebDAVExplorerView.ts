@@ -417,7 +417,7 @@ export class WebDAVExplorerView extends View {
         }
 
         this.refreshDebounceTimer = window.setTimeout(() => {
-            this.executeRefresh();
+            void this.executeRefresh();
         }, 300);
     }
 
