@@ -340,16 +340,16 @@ export class WebDAVExplorerView extends View {
             'jpeg': '🖼️',
             'png': '🖼️',
             'gif': '🖼️',
-            'mp4': '🎬',  // 视频
+            'mp4': '🎬',
             'mkv': '🎬',
             'avi': '🎬',
             'mov': '🎬',
-            'mp3': '🎵',  // 音频
+            'mp3': '🎵',
             'wav': '🎵',
-            'zip': '📦',  // 压缩文件
+            'zip': '📦',
             'rar': '📦',
             '7z': '📦',
-            'strm': '🔗'  // strm文件
+            'strm': '🔗'
         };
 
         if (!ext || !iconMap[ext]) {
