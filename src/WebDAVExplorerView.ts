@@ -416,9 +416,10 @@ export class WebDAVExplorerView extends View {
             clearTimeout(this.refreshDebounceTimer);
         }
 
-        this.refreshDebounceTimer = window.setTimeout(() => {
-            void this.executeRefresh();
-        }, 300);
+        this.refreshDebounceTimer = window.setTimeout(async () => {
+        await sleep(300);
+        await this.executeRefresh();
+    }, 0);
     }
 
     private async executeRefresh(): Promise<void> {
