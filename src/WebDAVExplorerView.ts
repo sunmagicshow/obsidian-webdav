@@ -506,13 +506,10 @@ export class WebDAVExplorerView extends View {
         const messageEl = this.containerEl.createEl('div', {cls: 'webdav-connection-failed'});
 
         // 添加错误图标和消息
-        const errorIcon = messageEl.createEl('div', {cls: 'webdav-error-icon'});
+        const errorIcon = messageEl.createEl('div');
         setIcon(errorIcon, 'cloud-off');
 
-        messageEl.createEl('p', {
-            text: this.t.view.connectionFailed,
-            cls: 'webdav-error-message'
-        });
+        messageEl.createEl('p', {text: this.t.view.connectionFailed,});
         // 确保面包屑导航显示当前路径
         if (this.currentPath) {
             this.createBreadcrumb(this.currentPath);
@@ -934,9 +931,6 @@ export class WebDAVExplorerView extends View {
         const listContainer = container.createEl('div', {cls: 'file-list-container'});
         const fileList = listContainer.createEl('div', {cls: 'file-list'});
 
-        fileList.createEl('div', {
-            cls: 'file-item error',
-            text: `⛔ ${message}`
-        });
+        fileList.createEl('div', {text: `⛔ ${message}`});
     }
 }
