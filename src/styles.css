@@ -75,14 +75,7 @@
 	height: 16px;
 }
 
-.webdav-button-text {
-	font-size: 0.8em;
-	color: var(--text-muted);
-	white-space: nowrap;
-	font-weight: 500;
-}
-
-.webdav-button:hover .webdav-button-text {
+.webdav-button:hover  {
 	color: var(--text-normal);
 }
 

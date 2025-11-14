@@ -28,8 +28,7 @@ export class WebDAVClient {
             // 测试连接
             await this.client.getDirectoryContents('/');
             return true;
-        } catch (err) {
-            console.error('Failed to initialize WebDAV client:', err);
+        } catch {
             this.client = null;
             return false;
         }

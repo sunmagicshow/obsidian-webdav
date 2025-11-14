@@ -37,7 +37,7 @@ export interface LangPack {
         error: string;
         emptyDir: string;
         currentPath: string;
-        refreshing: string;
+        refreshSuccess: string;
         opening: string;
         openFailed: string;
         rootDirectory: string;
@@ -54,6 +54,7 @@ export interface LangPack {
         sortBySizeDesc: string;
         sortByDateAsc: string;
         sortByDateDesc: string;
+        selectServer: string;
     };
 }
 
@@ -91,7 +92,7 @@ const en: LangPack = {
         error: 'Error',
         emptyDir: 'Empty directory',
         currentPath: 'Current path',
-        refreshing: 'Refreshing...',
+        refreshSuccess: 'Refresh success',
         opening: 'Opening file...',
         openFailed: 'Failed to open file',
         rootDirectory: 'Home directory',
@@ -108,6 +109,7 @@ const en: LangPack = {
         sortBySizeDesc: 'Size (large-small)',
         sortByDateAsc: 'Date (old-new)',
         sortByDateDesc: 'Date (new-old)',
+        selectServer: 'Choose a server',
     }
 };
 
@@ -145,7 +147,7 @@ const zh: LangPack = {
         error: '错误',
         emptyDir: '空文件夹',
         currentPath: '当前路径',
-        refreshing: '刷新中...',
+        refreshSuccess: '刷新成功',
         opening: '正在打开文件...',
         openFailed: '打开文件失败',
         rootDirectory: '根目录',
@@ -162,6 +164,7 @@ const zh: LangPack = {
         sortBySizeDesc: '大小（大-小）',
         sortByDateAsc: '日期（旧-新）',
         sortByDateDesc: '日期（新-旧）',
+        selectServer: '选择服务器',
     }
 };
 

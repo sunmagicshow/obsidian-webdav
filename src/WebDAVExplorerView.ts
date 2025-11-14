@@ -30,12 +30,16 @@ export class WebDAVExplorerView extends View {
         this.currentServer = plugin.getCurrentServer();
     }
 
+    private get t() {
+        return this.plugin.i18n();
+    }
+
     getViewType(): string {
         return VIEW_TYPE_WEBDAV_EXPLORER;
     }
 
     getDisplayText(): string {
-        return this.plugin.i18n().displayName;
+        return this.t.displayName;
     }
 
     getIcon(): string {
@@ -48,7 +52,7 @@ export class WebDAVExplorerView extends View {
 
         // 更新当前服务器
         this.currentServer = this.plugin.getCurrentServer();
-
+        this.buildNormalView();
         if (!this.currentServer) {
             this.showNoServerConfigured();
             return;
@@ -66,7 +70,6 @@ export class WebDAVExplorerView extends View {
         }
 
         const {url, username, password} = this.currentServer;
-        const t = this.plugin.i18n();
 
         // 检查必要配置
         if (!url || !username || !password) {
@@ -75,20 +78,14 @@ export class WebDAVExplorerView extends View {
         }
 
         try {
-
             const success = await this.initializeClient();
-            if (success) {
-                // 连接成功，构建正常视图
-                this.buildNormalView();
-                await this.listDirectory(this.currentPath);
-            } else {
-                throw new Error('Failed to initialize WebDAV client');
+            if (!success) {
+                throw new Error('Failed to initialize client');
             }
-        } catch (error: unknown) {
-            console.error('Connection failed:', error);
-            new Notice(`❌ ${t.view.connectionFailed}`);
-            // 显示连接失败界面，但保留视图结构
+            await this.listDirectory(this.currentPath);
+        } catch {
             this.showConnectionFailed();
+            this.showErrorNotice(this.t.view.connectionFailed);
         }
     }
 
@@ -127,7 +124,7 @@ export class WebDAVExplorerView extends View {
         const rootLink = rootItem.createEl('a', {cls: 'breadcrumb-root-link'});
 
         setIcon(rootLink, 'home'); // 使用Lucide的home图标
-        rootLink.title = this.plugin.i18n().view.rootDirectory;
+        rootLink.title = this.t.view.rootDirectory;
         rootLink.onclick = async () => {
             await this.listDirectory(rootPath);
         };
@@ -173,13 +170,11 @@ export class WebDAVExplorerView extends View {
     async listDirectory(path: string) {
         if (!this.currentServer) return;
 
-        const t = this.plugin.i18n();
-
         // 检查客户端是否存在
         if (!this.client) {
             const success = await this.initializeClient();
             if (!success) {
-                this.showError(t.view.connectionFailed);
+                this.showError(this.t.view.connectionFailed);
                 return;
             }
         }
@@ -231,7 +226,7 @@ export class WebDAVExplorerView extends View {
         // 显示加载状态
         const loadingEl = fileList.createEl('div', {
             cls: 'file-item loading',
-            text: '⏳ ' + t.view.loading
+            text: '⏳ ' + this.t.view.loading
         });
 
         try {
@@ -289,7 +284,7 @@ export class WebDAVExplorerView extends View {
                     // 根目录为空时显示空文件夹提示
                     fileList.createEl('div', {
                         cls: 'file-item empty',
-                        text: '📂 ' + t.view.emptyDir
+                        text: '📂 ' + this.t.view.emptyDir
                     });
                 }
                 // 非根目录且为空时，只显示".."项，不显示空文件夹提示
@@ -298,17 +293,13 @@ export class WebDAVExplorerView extends View {
                 this.renderFileList(fileList, files);
             }
 
-        } catch (err: unknown) {
+        } catch {
             loadingEl.remove();
-
-            // 简化错误处理：只显示错误信息，不进行重试
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error('WebDAV list directory error:', err);
-            new Notice(`${t.view.listFailed}: ${msg.substring(0, 100)}...`);
+            this.showErrorNotice(this.t.view.listFailed);
 
             fileList.createEl('div', {
                 cls: 'file-item error',
-                text: `⛔ ${t.view.error}: ${msg}`
+                text: `⛔ ${this.t.view.error}`
             });
         }
     }
@@ -377,25 +368,20 @@ export class WebDAVExplorerView extends View {
     openFileWithWeb(remotePath: string) {
         if (!this.currentServer) return;
 
-        const t = this.plugin.i18n();
         try {
             // 获取最终URL（已经编码过的）
             const finalUrl = this.getFileFullUrl(remotePath);
 
             // 创建带Basic认证的URL
             const {username, password} = this.currentServer;
-
             const authUrl = finalUrl.replace(/^https?:\/\//, `http://${username}:${password}@`);
-
             // 在新标签页中打开
             window.open(authUrl, '_blank');
 
-            new Notice(`✅ ${t.view.opening}`, 1000);
+            this.showErrorNotice(this.t.view.opening, false);
 
-        } catch (err: unknown) {
-            console.error('File open error:', err);
-            const errorMsg = err instanceof Error ? err.message : String(err);
-            new Notice(`❌ ${t.view.openFailed}: ${errorMsg}`);
+        } catch {
+            this.showErrorNotice(this.t.view.openFailed);
         }
     }
 
@@ -422,15 +408,11 @@ export class WebDAVExplorerView extends View {
     }
 
     private async executeRefresh(): Promise<void> {
-        const t = this.plugin.i18n();
         try {
             if (!this.currentServer) {
                 this.showNoServerConfigured();
                 return;
             }
-
-            new Notice(t.view.refreshing, 1000);
-
             const success = await this.initializeClient();
             if (!success) {
                 throw new Error('Failed to initialize WebDAV client');
@@ -441,10 +423,9 @@ export class WebDAVExplorerView extends View {
             }
 
             await this.listDirectory(this.currentPath);
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : String(err);
-            new Notice(`❌ ${t.view.connectionFailed}: ${msg.substring(0, 100)}...`);
-
+            this.showErrorNotice(this.t.view.refreshSuccess, false);
+        } catch {
+            this.showErrorNotice(this.t.view.connectionFailed);
             this.showConnectionFailed();
         }
     }
@@ -453,23 +434,18 @@ export class WebDAVExplorerView extends View {
     private buildNormalView() {
         this.containerEl.empty();
         this.containerEl.addClass('webdav-explorer-view');
-        // 获取i18n实例
-        const t = this.plugin.i18n();
 
-        // 创建头部区域
+        // 创建头部区域和标题行 - 所有按钮都靠左
         const headerEl = this.containerEl.createEl('div', {cls: 'webdav-header'});
-
-        // 标题行 - 所有按钮都靠左
         const titleRow = headerEl.createEl('div', {cls: 'webdav-title-row'});
 
+        // 刷新按钮和排序按钮组合容器
+        const actionsContainer = titleRow.createEl('div', {cls: 'webdav-actions-container'});
+
         // 服务器选择器
-        this.serverSelector = titleRow.createEl('div', {cls: 'webdav-button'});
+        this.serverSelector = actionsContainer.createEl('div', {cls: 'webdav-button'});
         const serverContent = this.serverSelector.createEl('div', {cls: 'webdav-button-content'});
         this.serverIconEl = serverContent.createSpan({cls: 'webdav-server-icon'});
-        serverContent.createSpan({
-            cls: 'webdav-button-text',
-            text: this.currentServer?.name || ''
-        });
 
         // 更新服务器图标
         this.updateServerIcon();
@@ -478,27 +454,27 @@ export class WebDAVExplorerView extends View {
         this.serverSelector.onclick = (evt) => {
             this.showServerMenu(evt);
         };
-
-        // 刷新按钮和排序按钮组合容器
-        const actionsContainer = titleRow.createEl('div', {cls: 'webdav-actions-container'});
-
-        // 刷新按钮 - 带文字
+        //设置服务器选择器的悬停提示
+        this.serverSelector.setAttribute('aria-label', this.t.view.selectServer);
+        // 刷新按钮
         const refreshButton = actionsContainer.createEl('div', {cls: 'webdav-button'});
         const refreshContent = refreshButton.createEl('div', {cls: 'webdav-button-content'});
         const refreshIcon = refreshContent.createSpan({cls: 'webdav-refresh-icon'});
         setIcon(refreshIcon, 'refresh-cw');
-        refreshButton.setAttribute('aria-label', t.view.refresh);
+
+        refreshButton.setAttribute('aria-label', this.t.view.refresh);
         refreshButton.onclick = () => {
             this.refresh();
         };
 
-        // 排序按钮 - 带文字
+        // 排序按钮
         this.sortButton = actionsContainer.createEl('div', {cls: 'webdav-button'});
         const sortContent = this.sortButton.createEl('div', {cls: 'webdav-button-content'});
         this.sortIconEl = sortContent.createSpan({cls: 'webdav-sort-icon'});
 
         this.updateSortIcon();
-        this.sortButton.setAttribute('aria-label', 'Sort files');
+        this.sortButton.setAttribute('aria-label', this.t.view.sort);
+
         this.sortButton.onclick = (evt) => {
             this.showSortMenu(evt);
         };
@@ -511,40 +487,51 @@ export class WebDAVExplorerView extends View {
         listContainer.createEl('div', {cls: 'file-list'});
     }
 
-    // 显示连接失败提示
-    private showConnectionFailed() {
-        // 清空容器但保留基本结构
-        const contentEl = this.containerEl.querySelector('.file-list-container') ||
-            this.containerEl.querySelector('.webdav-connection-failed');
 
-        if (contentEl) {
-            contentEl.remove();
+    // 显示连接失败提示 - 修复版本
+    private showConnectionFailed() {
+        // 确保头部区域存在，如果不存在就重建
+        if (!this.containerEl.querySelector('.webdav-header')) {
+            this.buildNormalView();
         }
 
+        // 只清空文件列表区域和旧的错误提示
+        const oldList = this.containerEl.querySelector('.file-list-container');
+        const oldError = this.containerEl.querySelector('.webdav-connection-failed');
+
+        if (oldList) oldList.remove();
+        if (oldError) oldError.remove();
+
+        // 创建连接失败消息容器
         const messageEl = this.containerEl.createEl('div', {cls: 'webdav-connection-failed'});
-        const t = this.plugin.i18n();
 
+        // 添加错误图标和消息
+        const errorIcon = messageEl.createEl('div', {cls: 'webdav-error-icon'});
+        setIcon(errorIcon, 'cloud-off');
 
-        // 刷新按钮
-        const refreshButton = messageEl.createEl('button', {
-            text: t.view.refresh || 'Refresh',
-            cls: 'mod-cta'
+        messageEl.createEl('p', {
+            text: this.t.view.connectionFailed,
+            cls: 'webdav-error-message'
         });
+        // 确保面包屑导航显示当前路径
+        if (this.currentPath) {
+            this.createBreadcrumb(this.currentPath);
+        }
+    }
 
-        refreshButton.onclick = async () => {
-            await this.connectAndList();
-        };
+
+    private showErrorNotice(message: string, isError: boolean = true) {
+        const prefix = isError ? '❌' : '✅';
+        new Notice(`${prefix} ${message}`, 1000);
     }
 
     // 显示排序菜单
     private showSortMenu(evt: MouseEvent) {
         const menu = new Menu();
-        const t = this.plugin.i18n();
-
         // 名称升序
         menu.addItem(item => {
             item
-                .setTitle(t.view.sortByNameAsc)
+                .setTitle(this.t.view.sortByNameAsc)
                 .setIcon(this.sortField === 'name' && this.sortOrder === 'asc' ? 'check' : '')
                 .onClick(() => {  // 移除了 async
                     this.sortField = 'name';
@@ -557,7 +544,7 @@ export class WebDAVExplorerView extends View {
         // 名称降序
         menu.addItem(item => {
             item
-                .setTitle(t.view.sortByNameDesc)
+                .setTitle(this.t.view.sortByNameDesc)
                 .setIcon(this.sortField === 'name' && this.sortOrder === 'desc' ? 'check' : '')
                 .onClick(() => {  // 移除了 async
                     this.sortField = 'name';
@@ -570,78 +557,78 @@ export class WebDAVExplorerView extends View {
         // 类型升序
         menu.addItem(item => {
             item
-                .setTitle(t.view.sortByTypeAsc)
+                .setTitle(this.t.view.sortByTypeAsc)
                 .setIcon(this.sortField === 'type' && this.sortOrder === 'asc' ? 'check' : '')
-                .onClick(() => {  // 移除了 async
+                .onClick(() => {
                     this.sortField = 'type';
                     this.sortOrder = 'asc';
                     this.updateSortIcon();
-                    this.refreshFileList();  // 移除了 await
+                    this.refreshFileList();
                 });
         });
 
         // 类型降序
         menu.addItem(item => {
             item
-                .setTitle(t.view.sortByTypeDesc)
+                .setTitle(this.t.view.sortByTypeDesc)
                 .setIcon(this.sortField === 'type' && this.sortOrder === 'desc' ? 'check' : '')
-                .onClick(() => {  // 移除了 async
+                .onClick(() => {
                     this.sortField = 'type';
                     this.sortOrder = 'desc';
                     this.updateSortIcon();
-                    this.refreshFileList();  // 移除了 await
+                    this.refreshFileList();
                 });
         });
 
         // 文件大小升序
         menu.addItem(item => {
             item
-                .setTitle(t.view.sortBySizeAsc)
+                .setTitle(this.t.view.sortBySizeAsc)
                 .setIcon(this.sortField === 'size' && this.sortOrder === 'asc' ? 'check' : '')
-                .onClick(() => {  // 移除了 async
+                .onClick(() => {
                     this.sortField = 'size';
                     this.sortOrder = 'asc';
                     this.updateSortIcon();
-                    this.refreshFileList();  // 移除了 await
+                    this.refreshFileList();
                 });
         });
 
         // 大小降序
         menu.addItem(item => {
             item
-                .setTitle(t.view.sortBySizeDesc)
+                .setTitle(this.t.view.sortBySizeDesc)
                 .setIcon(this.sortField === 'size' && this.sortOrder === 'desc' ? 'check' : '')
-                .onClick(() => {  // 移除了 async
+                .onClick(() => {
                     this.sortField = 'size';
                     this.sortOrder = 'desc';
                     this.updateSortIcon();
-                    this.refreshFileList();  // 移除了 await
+                    this.refreshFileList();
                 });
         });
 
         // 日期升序
         menu.addItem(item => {
             item
-                .setTitle(t.view.sortByDateAsc)
+                .setTitle(this.t.view.sortByDateAsc)
                 .setIcon(this.sortField === 'date' && this.sortOrder === 'asc' ? 'check' : '')
-                .onClick(() => {  // 移除了 async
+                .onClick(() => {
                     this.sortField = 'date';
                     this.sortOrder = 'asc';
                     this.updateSortIcon();
-                    this.refreshFileList();  // 移除了 await
+                    this.refreshFileList();
                 });
         });
 
         // 日期降序
         menu.addItem(item => {
             item
-                .setTitle(t.view.sortByDateDesc)
+                .setTitle(this.t.view.sortByDateDesc)
                 .setIcon(this.sortField === 'date' && this.sortOrder === 'desc' ? 'check' : '')
-                .onClick(() => {  // 移除了 async
+                .onClick(() => {
                     this.sortField = 'date';
                     this.sortOrder = 'desc';
                     this.updateSortIcon();
-                    this.refreshFileList();  // 移除了 await
+                    this.refreshFileList();
                 });
         });
 
@@ -651,14 +638,10 @@ export class WebDAVExplorerView extends View {
     // 更新排序图标
     private updateSortIcon() {
         if (!this.sortIconEl) return;
-        // 获取i18n实例
-        const t = this.plugin.i18n();
         this.sortIconEl.empty();
 
-        let tooltip = `${t.view.sort}: ${this.sortField}, ${this.sortOrder}`;
-
+        let tooltip = `${this.t.view.sort}: ${this.sortField}, ${this.sortOrder}`;
         let iconName = this.sortOrder === 'asc' ? 'arrow-up-narrow-wide' : 'arrow-down-wide-narrow';
-
 
         setIcon(this.sortIconEl, iconName);
         if (this.sortButton) {
@@ -669,8 +652,8 @@ export class WebDAVExplorerView extends View {
     // 刷新文件列表（保持当前路径）
     private refreshFileList(): void {
         if (this.currentPath) {
-            this.listDirectory(this.currentPath).catch(err => {
-                console.error('Refresh file list failed:', err);
+            this.listDirectory(this.currentPath).catch(() => {
+                this.showErrorNotice(this.t.view.refreshFailed, false);
             });
         }
     }
@@ -691,9 +674,8 @@ export class WebDAVExplorerView extends View {
     // 显示服务器选择菜单
     private showServerMenu(evt: MouseEvent) {
         const servers = this.plugin.getServers();
-        const t = this.plugin.i18n();
         if (servers.length === 0) {
-            new Notice(t.settings.serverListEmpty);
+            new Notice(this.t.settings.serverListEmpty);
             return;
         }
 
@@ -737,12 +719,11 @@ export class WebDAVExplorerView extends View {
     private showNoServerConfigured() {
         this.containerEl.empty();
         const messageEl = this.containerEl.createEl('div', {cls: 'webdav-no-server'});
-        const t = this.plugin.i18n();
-        messageEl.createEl('p', {text: t.view.pleaseConfigure});
+        messageEl.createEl('p', {text: this.t.view.pleaseConfigure});
 
         // 配置服务器按钮
         const configureButton = messageEl.createEl('button', {
-            text: t.settings.title,
+            text: this.t.settings.title,
             cls: 'mod-cta'
         });
 
@@ -774,8 +755,7 @@ export class WebDAVExplorerView extends View {
                 return true;
             }
             return false;
-        } catch (err) {
-            console.error('Failed to initialize WebDAV client:', err);
+        } catch {
             this.client = null;
             return false;
         }
@@ -783,11 +763,9 @@ export class WebDAVExplorerView extends View {
 
     // 超时控制包装器
     private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-        // 获取i18n实例
-        const t = this.plugin.i18n();
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
-                reject(new Error(t.view.connectionFailed));
+                reject(new Error(this.t.view.connectionFailed));
             }, timeoutMs);
 
             promise.then(
@@ -949,7 +927,6 @@ export class WebDAVExplorerView extends View {
         const parts = filename.split('.');
         return parts.length > 1 ? parts.pop() || '' : '';
     }
-
 
     // 显示错误信息
     private showError(message: string) {
