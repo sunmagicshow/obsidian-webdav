@@ -172,9 +172,10 @@ export class WebDAVExplorerView extends View {
     }
 
     // 列出目录内容
-    async listDirectory(path: string) {
+    async listDirectory(path: string, retryCount: number = 0) {
         if (!this.currentServer) return;
-
+        const maxRetries = 3; // 最大重试次数
+        const retryDelay = 1000; // 重试延迟2秒
         // 检查客户端是否存在
         if (!this.client) {
             const success = await this.initializeClient();
@@ -228,11 +229,10 @@ export class WebDAVExplorerView extends View {
         const listContainer = container.createEl('div', {cls: 'file-list-container'});
         const fileList = listContainer.createEl('div', {cls: 'file-list'});
 
-        // 显示加载状态
-        const loadingEl = fileList.createEl('div', {
-            cls: 'file-item loading',
-            text: '⏳ ' + this.t.view.loading
-        });
+        const loadingEl = fileList.createEl('div', {cls: 'file-item loading'});
+        const loadingIcon = loadingEl.createSpan({cls: 'loading-icon'});
+        setIcon(loadingIcon, 'loader-2'); // 使用 Obsidian 的加载器图标
+        loadingEl.createSpan({text: this.t.view.loading});
 
         try {
             if (!this.client) {
@@ -241,11 +241,12 @@ export class WebDAVExplorerView extends View {
             // 获取目录内容（带超时控制）
             const files = await this.withTimeout<FileStat[]>(
                 this.client.getDirectoryContents(this.currentPath),
-                5000 // 5秒超时
+                3000 // 3秒超时
             );
 
             loadingEl.remove();
-
+            // 成功时清除重试计数
+            retryCount = 0;
             // 添加上一级目录导航 ("..")
             if (this.currentPath !== this.rootPath) {
                 const upItem = fileList.createEl('div', {
@@ -300,12 +301,21 @@ export class WebDAVExplorerView extends View {
 
         } catch {
             loadingEl.remove();
-            this.showErrorNotice(this.t.view.listFailed);
 
-            fileList.createEl('div', {
-                cls: 'file-item error',
-                text: `⛔ ${this.t.view.error}`
-            });
+            // 检查是否超过最大重试次数
+            if (retryCount < maxRetries) {
+                // 延迟后自动重试
+                setTimeout(() => {
+                    this.listDirectory(path, retryCount + 1);
+                }, retryDelay);
+            } else {
+                // 超过重试次数，显示最终错误
+                this.showErrorNotice(this.t.view.listFailed);
+                fileList.createEl('div', {
+                    cls: 'file-item error',
+                    text: `⛔ ${this.t.view.error}`
+                });
+            }
         }
     }
 
