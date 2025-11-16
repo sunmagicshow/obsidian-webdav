@@ -782,7 +782,19 @@ export class WebDAVExplorerView extends View {
                 // 文件拖拽事件
                 item.ondragstart = (event) => {
                     this.selectItem(item);
-                    const finalUrl = this.getFileFullUrl(file.filename);
+                    // 获取原始URL
+                    const originalUrl = this.getFileFullUrl(file.filename);
+
+                    // 根据urlPrefix配置处理URL
+                    let finalUrl = originalUrl;
+                    if (this.currentServer?.urlPrefix && this.currentServer.urlPrefix.trim() !== '') {
+                        // 如果有配置urlPrefix，则替换URL前缀
+                        const serverUrl = this.currentServer.url.replace(/\/$/, '');
+                        const urlPrefix = this.currentServer.urlPrefix.trim();
+
+                        // 替换服务器URL部分为配置的urlPrefix
+                        finalUrl = originalUrl.replace(serverUrl, urlPrefix);
+                    }
 
                     event.dataTransfer?.setData('text/plain', file.filename);
                     event.dataTransfer?.setData('text/uri-list', finalUrl);

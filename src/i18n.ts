@@ -1,4 +1,4 @@
-import { getLanguage } from 'obsidian';
+import {getLanguage} from 'obsidian';
 
 // 定义语言类型
 export type Locale = 'zh' | 'en';
@@ -20,6 +20,7 @@ export interface LangPack {
         username: string;
         password: string;
         remoteDir: SettingItem;
+        urlPrefix: SettingItem;
         deleteServer: string;
         defaultServer: string;
         defaultServerDesc: string;
@@ -75,6 +76,10 @@ const en: LangPack = {
         remoteDir: {
             name: 'Remote directory',
             desc: 'Remote directory path (e.g., /notes)'
+        },
+        urlPrefix: {
+            name: 'URL prefix',
+            desc: 'URL prefix to replace,otherwise keep it empty (e.g., http://192.168.0.1:8080/dav)'
         },
         deleteServer: 'Delete server',
         defaultServer: 'Default server',
@@ -132,6 +137,10 @@ const zh: LangPack = {
             name: '远程目录',
             desc: '远程目录路径（例如：/notes）'
         },
+        urlPrefix: {
+            name: 'URL前缀替换',
+            desc: '替换拖拽生成的URL前缀,否则保持为空（例如：http://192.168.0.1:8080/dav）'
+        },
         deleteServer: '删除服务器',
         defaultServer: '默认服务器',
         defaultServerDesc: '选择打开 WebDAV 资源管理器时使用的默认服务器',
@@ -172,7 +181,7 @@ const zh: LangPack = {
 };
 
 // 所有语言包
-const locales = { en, zh };
+const locales = {en, zh};
 
 // 获取系统语言
 export function getSystemLocale(): Locale {

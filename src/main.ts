@@ -1,8 +1,7 @@
 import {Notice, Plugin} from 'obsidian';
 import {WebDAVSettingTab} from './WebDAVSettingTab';
 import {WebDAVExplorerView} from './WebDAVExplorerView';
-import {i18n} from './i18n';
-import type {LangPack} from './i18n';
+import { i18n, type LangPack } from './i18n';
 import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 
 export default class WebDAVPlugin extends Plugin {

@@ -154,6 +154,20 @@ export class WebDAVSettingTab extends PluginSettingTab {
                             });
                     });
 
+                //  URL前缀配置
+                new Setting(serversContainer)
+                    .setName(t.settings.urlPrefix.name)
+                    .setDesc(t.settings.urlPrefix.desc)
+                    .addText(text => {
+                        text
+                            .setPlaceholder('')
+                            .setValue(server.urlPrefix)
+                            .onChange(async (value: string) => {
+                                server.urlPrefix = value.trim();
+                                await this.plugin.saveSettings();
+                                serverSetting.setDesc(this.getServerDescription(server));
+                            });
+                    });
                 // 分隔线
                 if (index < this.plugin.settings.servers.length - 1) {
                     serversContainer.createEl('hr');
@@ -176,6 +190,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
                             username: '',
                             password: '',
                             remoteDir: '',
+                            urlPrefix: '',
                             isDefault: this.plugin.settings.servers.length === 0
                         };
                         this.plugin.settings.servers.push(newServer);
