@@ -306,7 +306,7 @@ export class WebDAVExplorerView extends View {
             if (retryCount < maxRetries) {
                 // 延迟后自动重试
                 setTimeout(() => {
-                    this.listDirectory(path, retryCount + 1);
+                    void this.listDirectory(path, retryCount + 1);
                 }, retryDelay);
             } else {
                 // 超过重试次数，显示最终错误
