@@ -43,8 +43,6 @@ export interface LangPack {
         openFailed: string;
         rootDirectory: string;
         loading: string;
-        retry: string;
-        retryPrompt: string;
         refresh: string;
         sort: string;
         sortByNameAsc: string;
@@ -103,8 +101,6 @@ const en: LangPack = {
         openFailed: 'Failed to open file',
         rootDirectory: 'Home directory',
         loading: 'Loading...',
-        retry: 'Retry',
-        retryPrompt: 'Loading failed, click to retry',
         refresh: 'Refresh',
         sort: 'Sort',
         sortByNameAsc: 'Name (a-z)',
@@ -163,8 +159,6 @@ const zh: LangPack = {
         openFailed: '打开文件失败',
         rootDirectory: '根目录',
         loading: '加载中...',
-        retry: '重试',
-        retryPrompt: '加载失败，点击重试',
         refresh: '刷新',
         sort: '排序',
         sortByNameAsc: '名称（A-Z）',
