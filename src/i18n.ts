@@ -55,6 +55,7 @@ export interface LangPack {
         sortByDateAsc: string;
         sortByDateDesc: string;
         selectServer: string;
+        switchSuccess: string;
     };
 }
 
@@ -110,6 +111,7 @@ const en: LangPack = {
         sortByDateAsc: 'Date (old-new)',
         sortByDateDesc: 'Date (new-old)',
         selectServer: 'Choose a server',
+        switchSuccess: 'Switch success',
     }
 };
 
@@ -165,6 +167,7 @@ const zh: LangPack = {
         sortByDateAsc: '日期（旧-新）',
         sortByDateDesc: '日期（新-旧）',
         selectServer: '选择服务器',
+        switchSuccess: '切换成功',
     }
 };
 
