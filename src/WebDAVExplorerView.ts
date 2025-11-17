@@ -175,7 +175,7 @@ export class WebDAVExplorerView extends View {
     async listDirectory(path: string, retryCount: number = 0) {
         if (!this.currentServer) return;
         const maxRetries = 3; // 最大重试次数
-        const retryDelay = 1000; // 重试延迟2秒
+        const retryDelay = 1000; // 重试延迟1秒
         // 检查客户端是否存在
         if (!this.client) {
             const success = await this.initializeClient();
