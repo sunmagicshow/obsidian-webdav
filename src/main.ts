@@ -32,7 +32,7 @@ export default class WebDAVPlugin extends Plugin {
         }
     }
 
-    async onunload() {
+    onunload() {
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER);
 
         // 卸载所有视图
@@ -40,8 +40,8 @@ export default class WebDAVPlugin extends Plugin {
             if (leaf.view && typeof leaf.view.onunload === 'function') {
                 try {
                     leaf.view.onunload();
-                } catch (e) {
-                    console.error('Error unloading view:', e);
+                } catch {
+                    
                 }
             }
             leaf.detach();

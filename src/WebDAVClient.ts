@@ -1,4 +1,4 @@
-import {createClient, FileStat, ResponseDataDetailed} from 'webdav';
+import {createClient, FileStat} from 'webdav';
 import {IWebDAVClient, WebDAVServer} from './types';
 
 export class WebDAVClient implements IWebDAVClient {

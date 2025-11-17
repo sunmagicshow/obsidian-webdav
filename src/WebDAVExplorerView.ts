@@ -1,7 +1,7 @@
 import {WorkspaceLeaf, View, Notice, Menu, MarkdownView, setIcon} from 'obsidian';
 import {FileStat} from 'webdav';
 import WebDAVPlugin from './main';
-import {WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER, AppWithSettings} from './types';
+import {WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 import {WebDAVClient} from './WebDAVClient';
 import {WebDAVFileService} from './WebDAVFileService';
 
