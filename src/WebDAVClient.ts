@@ -44,7 +44,7 @@ export class WebDAVClient implements IWebDAVClient {
         if (Array.isArray(result)) {
             return result;
         } else {
-            return (result as ResponseDataDetailed<FileStat[]>).data;
+            return result.data;
         }
     }
 

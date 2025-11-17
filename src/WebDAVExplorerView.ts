@@ -26,9 +26,9 @@ export class WebDAVExplorerView extends View {
     constructor(leaf: WorkspaceLeaf, plugin: WebDAVPlugin) {
         super(leaf);
         this.plugin = plugin;
-        this.fileService = new WebDAVFileService(this.app); // 修复：使用 this.app
+        this.fileService = new WebDAVFileService(this.app);
 
-        // 防抖刷新 - 修复：正确声明 refresh 方法
+        // 防抖刷新
         this.refresh = this.fileService.debounce(this.executeRefresh.bind(this), 300);
     }
 
@@ -68,7 +68,7 @@ export class WebDAVExplorerView extends View {
 
     // ==================== 主要方法 ====================
 
-    async onunload() {
+    onunload() {
         this.client = null;
         this.selectedItem = null;
         this.currentServer = null;
@@ -107,11 +107,20 @@ export class WebDAVExplorerView extends View {
         this.sortButton.setAttribute('aria-label', this.t.view.sort);
         this.sortButton.onclick = (evt) => this.showSortMenu(evt);
 
-        // 面包屑容器
-        headerEl.createEl('div', {cls: 'webdav-breadcrumb-container'});
+        // 面包屑容器 - 总是创建
+        const breadcrumbContainer = headerEl.createEl('div', {cls: 'webdav-breadcrumb-container'});
+        const breadcrumbEl = breadcrumbContainer.createEl('div', {cls: 'webdav-breadcrumb'});
 
-        // 文件列表容器
-        this.containerEl.createEl('div', {cls: 'file-list-container'});
+        // 创建根目录面包屑
+        const rootItem = breadcrumbEl.createEl('span', {cls: 'breadcrumb-item breadcrumb-root'});
+        const rootLink = rootItem.createEl('a', {cls: 'breadcrumb-root-link'});
+        setIcon(rootLink, 'home');
+        rootLink.title = this.t.view.rootDirectory;
+        rootLink.onclick = async () => {
+            if (this.currentServer) {
+                await this.listDirectory(this.rootPath);
+            }
+        };
     }
 
     private async connectAndList(): Promise<boolean> {
@@ -128,10 +137,6 @@ export class WebDAVExplorerView extends View {
         }
 
         try {
-            if (this.containerEl.querySelector('.webdav-connection-failed')) {
-                this.buildHeader();
-            }
-
             const success = await this.initializeClient();
             if (!success) {
                 // 初始化失败，显示连接失败界面
@@ -160,7 +165,8 @@ export class WebDAVExplorerView extends View {
         if (!this.client) {
             const success = await this.initializeClient();
             if (!success) {
-                this.showError(this.t.view.connectionFailed);
+                // 改为使用 Notice 提示
+                this.showNotice(this.t.view.connectionFailed, true);
                 return;
             }
         }
@@ -189,9 +195,11 @@ export class WebDAVExplorerView extends View {
             setIcon(loadingIcon, 'loader-2');
             loadingEl.createSpan({text: this.t.view.loading});
         }
+
         try {
             if (!this.client) {
-                this.showError(this.t.view.connectionFailed);
+                // 改为使用 Notice 提示
+                this.showNotice(this.t.view.connectionFailed, true);
                 return;
             }
 
@@ -228,10 +236,13 @@ export class WebDAVExplorerView extends View {
                     void this.listDirectory(path, retryCount + 1);
                 }, retryDelay);
             } else {
+                // 改为使用 Notice 提示，不在文件列表中显示错误
                 this.showNotice(this.t.view.listFailed, true);
+
+                // 显示空目录状态，而不是错误信息
                 fileList.createEl('div', {
-                    cls: 'file-item error',
-                    text: `⛔ ${this.t.view.error}`
+                    cls: 'file-item empty',
+                    text: '📂 ' + this.t.view.emptyDir
                 });
             }
         }
@@ -272,10 +283,11 @@ export class WebDAVExplorerView extends View {
 
         try {
             const finalUrl = this.getFileFullUrl(remotePath);
-            const {username, password} = this.currentServer;
-            const authUrl = finalUrl.replace(/^https?:\/\//, `http://${username}:${password}@`);
 
-            window.open(authUrl, '_blank');
+            // const {username, password} = this.currentServer;
+            // const authUrl = finalUrl.replace(/^https?:\/\//, `http://${username}:${password}@`);
+
+            window.open(finalUrl, '_blank');
             this.showNotice(this.t.view.opening, false);
         } catch {
             this.showNotice(this.t.view.openFailed, true);
@@ -419,16 +431,25 @@ export class WebDAVExplorerView extends View {
         const target = event.currentTarget as HTMLElement;
         this.selectItem(target);
 
+        // 处理文件名：将方括号替换为中文方括号
+        const processedFilename = file.filename
+            .replace(/\[/g, '【')
+            .replace(/\]/g, '】');
+
+        // 使用处理前的文件名生成URL
         const originalUrl = this.getFileFullUrl(file.filename);
+
         let finalUrl = originalUrl;
 
+        // 如果有 URL 前缀，则替换掉服务器 URL
         if (this.currentServer?.urlPrefix && this.currentServer.urlPrefix.trim() !== '') {
             const serverUrl = this.currentServer.url.replace(/\/$/, '');
             const urlPrefix = this.currentServer.urlPrefix.trim();
             finalUrl = originalUrl.replace(serverUrl, urlPrefix);
         }
 
-        event.dataTransfer?.setData('text/plain', file.filename);
+        // 设置拖拽数据 - 使用处理后的文件名
+        event.dataTransfer?.setData('text/plain', processedFilename);
         event.dataTransfer?.setData('text/uri-list', finalUrl);
 
         document.addEventListener('dragend', () => {
@@ -465,6 +486,8 @@ export class WebDAVExplorerView extends View {
         menu.showAtMouseEvent(event);
     }
 
+// 在 WebDAVExplorerView 类中修改相关方法
+
     private showServerMenu(evt: MouseEvent): void {
         const servers = this.plugin.getServers();
         if (servers.length === 0) {
@@ -475,18 +498,44 @@ export class WebDAVExplorerView extends View {
         const menu = new Menu();
         servers.forEach(server => {
             menu.addItem(item => {
-                const isSelected = server.id === this.currentServer?.id;
+                const isSelected = server.name === this.currentServer?.name;
                 const icon = isSelected ? 'check' : '';
                 const space = '\u2009\u2009\u2009\u2009\u2009\u2009';
                 const title = isSelected ? server.name : `${space}${server.name}`;
 
                 item.setTitle(title)
                     .setIcon(icon)
-                    .onClick(async () => await this.switchServer(server.id));
+                    .onClick(async () => await this.switchServer(server.name));
             });
         });
 
         menu.showAtMouseEvent(evt);
+    }
+
+    private async switchServer(serverName: string): Promise<void> {
+        this.currentServer = this.plugin.getServerByName(serverName);
+        if (this.currentServer) {
+            this.plugin.settings.currentServerName = serverName;
+            await this.plugin.saveSettings();
+
+            this.client = null;
+            this.currentPath = '/';
+            this.rootPath = '/';
+            this.selectedItem = null;
+
+            // 完全清除容器内容并重新构建
+            this.containerEl.empty();
+            this.containerEl.addClass('webdav-explorer-view');
+            this.buildHeader();
+
+            const success = await this.connectAndList();
+
+            if (success) {
+                this.showNotice(this.t.view.switchSuccess, false);
+            } else {
+                this.showNotice(this.t.view.connectionFailed, true);
+            }
+        }
     }
 
     private showSortMenu(evt: MouseEvent): void {
@@ -529,29 +578,6 @@ export class WebDAVExplorerView extends View {
 
     // ==================== 状态管理 ====================
 
-    private async switchServer(serverId: string): Promise<void> {
-        this.currentServer = this.plugin.getServerById(serverId);
-        if (this.currentServer) {
-            this.plugin.settings.currentServerId = serverId;
-            await this.plugin.saveSettings();
-
-            this.client = null;
-            this.currentPath = '/';
-            this.rootPath = '/';
-            this.selectedItem = null;
-
-            // 完全清除容器内容并重新构建
-            this.containerEl.empty();
-            this.containerEl.addClass('webdav-explorer-view');
-            this.buildHeader();
-
-            const success = await this.connectAndList();
-
-            if (success) {
-                this.showNotice(this.t.view.switchSuccess, false);
-            }
-        }
-    }
 
     private selectItem(item: HTMLElement): void {
         if (this.selectedItem) {
@@ -595,10 +621,6 @@ export class WebDAVExplorerView extends View {
                 return;
             }
 
-            if (this.containerEl.querySelector('.webdav-connection-failed')) {
-                this.buildHeader();
-            }
-
             await this.listDirectory(this.currentPath);
             this.showNotice(this.t.view.refreshSuccess, false);
         } catch {
@@ -625,7 +647,7 @@ export class WebDAVExplorerView extends View {
                 return true;
             }
             return false;
-        } catch (error) {
+        } catch {
             this.client = null;
             return false;
         }
@@ -712,19 +734,18 @@ export class WebDAVExplorerView extends View {
     }
 
     private showConnectionFailed(): void {
-        if (!this.containerEl.querySelector('.webdav-header')) {
-            this.buildHeader();
-        }
+        // 直接重新构建界面
+        this.buildHeader();
 
-        const oldList = this.containerEl.querySelector('.file-list-container');
-        const oldError = this.containerEl.querySelector('.webdav-connection-failed');
-        if (oldList) oldList.remove();
-        if (oldError) oldError.remove();
+        // 创建空的文件列表容器
+        const listContainer = this.containerEl.createEl('div', {cls: 'file-list-container'});
+        const fileList = listContainer.createEl('div', {cls: 'file-list'});
 
-        const messageEl = this.containerEl.createEl('div', {cls: 'webdav-connection-failed'});
-        const errorIcon = messageEl.createEl('div');
-        setIcon(errorIcon, 'cloud-off');
-        messageEl.createEl('p', {text: this.t.view.connectionFailed});
+        // 显示空状态而不是错误信息
+        fileList.createEl('div', {
+            cls: 'file-item empty',
+            text: '📂 ' + this.t.view.emptyDir
+        });
 
         if (this.currentPath) {
             this.createBreadcrumb(this.currentPath);
@@ -733,19 +754,15 @@ export class WebDAVExplorerView extends View {
 
     private showNoServerConfigured(): void {
         this.containerEl.empty();
-        const messageEl = this.containerEl.createEl('div', {cls: 'webdav-no-server'});
-        messageEl.createEl('p', {text: this.t.view.pleaseConfigure});
+        this.containerEl.addClass('webdav-explorer-view');
 
-        const configureButton = messageEl.createEl('button', {
-            text: this.t.settings.title,
-            cls: 'mod-cta'
-        });
+        // 构建完整的头部结构
+        this.buildHeader();
 
-        configureButton.onclick = () => {
-            (this.app as AppWithSettings).setting.open();
-            (this.app as AppWithSettings).setting.openTabById('webdav-explorer');
-        };
+        // 创建空的文件列表容器，保持界面结构完整
+        this.containerEl.createEl('div', {cls: 'file-list-container'});
     }
+
 
     private showError(message: string): void {
         const container = this.containerEl;

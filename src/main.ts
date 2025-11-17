@@ -1,8 +1,8 @@
-import { Notice, Plugin } from 'obsidian';
-import { WebDAVSettingTab } from './WebDAVSettingTab';
-import { WebDAVExplorerView } from './WebDAVExplorerView';
-import { i18n, type LangPack } from './i18n';
-import { WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER } from './types';
+import {Notice, Plugin} from 'obsidian';
+import {WebDAVSettingTab} from './WebDAVSettingTab';
+import {WebDAVExplorerView} from './WebDAVExplorerView';
+import {i18n, type LangPack} from './i18n';
+import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 
 export default class WebDAVPlugin extends Plugin {
     settings: WebDAVSettings = DEFAULT_SETTINGS;
@@ -54,11 +54,11 @@ export default class WebDAVPlugin extends Plugin {
     // ==================== 服务器管理 ====================
 
     getCurrentServer(): WebDAVServer | null {
-        const { servers, currentServerId } = this.settings;
+        const {servers, currentServerName} = this.settings;
 
         // 优先使用当前选中的服务器
-        if (currentServerId) {
-            const server = servers.find(s => s.id === currentServerId);
+        if (currentServerName) {
+            const server = servers.find(s => s.name === currentServerName);
             if (server) return server;
         }
 
@@ -66,7 +66,7 @@ export default class WebDAVPlugin extends Plugin {
     }
 
     getDefaultServer(): WebDAVServer | null {
-        const { servers } = this.settings;
+        const {servers} = this.settings;
 
         // 首先查找标记为默认的服务器
         const defaultServer = servers.find(s => s.isDefault);
@@ -80,17 +80,17 @@ export default class WebDAVPlugin extends Plugin {
         return this.settings.servers;
     }
 
-    getServerById(id: string): WebDAVServer | null {
-        return this.settings.servers.find(s => s.id === id) || null;
+    getServerByName(name: string): WebDAVServer | null {
+        return this.settings.servers.find(s => s.name === name) || null;
     }
 
     // ==================== 视图管理 ====================
 
     async activateView() {
-        const { workspace } = this.app;
+        const {workspace} = this.app;
         const t = this.i18n();
 
-        // 总是使用默认服务器，忽略当前选中的服务器
+        // 总是使用默认服务器
         const defaultServer = this.getDefaultServer();
         if (!defaultServer) {
             new Notice(t.settings.serverListEmpty);
@@ -98,7 +98,7 @@ export default class WebDAVPlugin extends Plugin {
         }
 
         // 设置当前服务器为默认服务器
-        this.settings.currentServerId = defaultServer.id;
+        this.settings.currentServerName = defaultServer.name;
         await this.saveSettings();
 
         // 查找已存在的视图
@@ -134,9 +134,9 @@ export default class WebDAVPlugin extends Plugin {
 
     // ==================== 设置管理 ====================
 
+    // 进一步简化的 loadSettings
     async loadSettings() {
-        const data = await this.loadData();
-        this.settings = { ...DEFAULT_SETTINGS, ...data };
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
 
     async saveSettings() {

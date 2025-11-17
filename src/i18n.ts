@@ -15,11 +15,10 @@ export interface LangPack {
     settings: {
         title: string;
         addServer: string;
-        noServers: string;
-        url: SettingItem;
+        url: string;
         username: string;
         password: string;
-        remoteDir: SettingItem;
+        remoteDir: string;
         urlPrefix: SettingItem;
         downloadPath: SettingItem;
         deleteServer: string;
@@ -30,9 +29,10 @@ export interface LangPack {
         deleteNotice: string;
         serverList: string;
         serverListEmpty: string;
+        duplicateName: string;
+        nameRequired: string;
     };
     view: {
-        pleaseConfigure: string;
         connectionFailed: string;
         listFailed: string;
         refreshFailed: string;
@@ -56,6 +56,7 @@ export interface LangPack {
         sortByDateDesc: string;
         selectServer: string;
         switchSuccess: string;
+        switchFailed: string;
     };
     contextMenu: {
         copyUrl: string;
@@ -77,24 +78,17 @@ const en: LangPack = {
     settings: {
         title: 'WebDAV settings',
         addServer: 'Add webdav server',
-        noServers: 'No webdav servers configured. Click the "+" button to add one.',
-        url: {
-            name: 'WebDAV server URL',
-            desc: 'The full URL of your webdav server'
-        },
+        url: 'WebDAV server URL', // 简化为字符串
         username: 'Username',
         password: 'Password',
-        remoteDir: {
-            name: 'Remote directory',
-            desc: 'Remote directory path (e.g., /notes)'
-        },
+        remoteDir: 'Remote directory', // 简化为字符串
         urlPrefix: {
             name: 'URL prefix',
             desc: 'URL prefix to replace,otherwise keep it empty'
         },
         downloadPath: {
             name: 'Download path',
-            desc: 'Path to save downloaded files (leave empty to use default folder, set to "/" to use root directory)',
+            desc: 'Leave empty or set to "/", then use default root directory',
         },
         deleteServer: 'Delete server',
         defaultServer: 'Default server',
@@ -104,9 +98,10 @@ const en: LangPack = {
         deleteNotice: 'Cannot delete the last server. At least one server is required.',
         serverList: 'WebDAV servers list',
         serverListEmpty: 'Please configure at least one webdav server in settings',
+        duplicateName: 'Server name already exists, please use a different name',
+        nameRequired: 'Server name cannot be empty',
     },
     view: {
-        pleaseConfigure: 'Please configure webdav settings in plugin preferences',
         connectionFailed: 'Connection failed',
         listFailed: 'Failed to list directory',
         refreshFailed: 'Refresh failed',
@@ -130,6 +125,7 @@ const en: LangPack = {
         sortByDateDesc: 'Date (new-old)',
         selectServer: 'Choose a server',
         switchSuccess: 'Switch success',
+        switchFailed: 'Switch failed',
     },
     contextMenu: {
         copyUrl: 'Copy URL link',
@@ -151,24 +147,17 @@ const zh: LangPack = {
     settings: {
         title: 'WebDAV 设置',
         addServer: '添加 WebDAV 服务器',
-        noServers: '未配置 WebDAV 服务器。点击"+"按钮添加一个。',
-        url: {
-            name: 'WebDAV 服务器地址',
-            desc: 'WebDAV 服务器的完整 URL'
-        },
+        url: 'WebDAV 服务器地址', // 简化为字符串
         username: '用户名',
         password: '密码',
-        remoteDir: {
-            name: '远程目录',
-            desc: '远程目录路径（例如：/notes）'
-        },
+        remoteDir: '远程目录', // 简化为字符串
         urlPrefix: {
             name: 'URL前缀替换',
             desc: '替换拖拽生成的URL前缀,否则保持为空'
         },
         downloadPath: {
             name: '下载路径',
-            desc: '文件下载到本地的保存路径（留空则使用默认文件夹，设置为 / 则使用根目录）',
+            desc: '留空或设置为 "/",则使用默认根目录',
         },
         deleteServer: '删除服务器',
         defaultServer: '默认服务器',
@@ -178,9 +167,10 @@ const zh: LangPack = {
         deleteNotice: '无法删除最后一个服务器。至少需要一个服务器。',
         serverList: 'WebDAV 服务器列表',
         serverListEmpty: '请在设置中配置至少一个 WebDAV 服务器',
+        duplicateName: '服务器名称已存在，请使用其他名称',
+        nameRequired: '服务器名称不能为空',
     },
     view: {
-        pleaseConfigure: '请在插件设置中配置 WebDAV 连接信息',
         connectionFailed: '连接失败',
         listFailed: '获取目录列表失败',
         refreshFailed: '刷新失败',
@@ -204,6 +194,7 @@ const zh: LangPack = {
         sortByDateDesc: '日期（新-旧）',
         selectServer: '选择服务器',
         switchSuccess: '切换成功',
+        switchFailed: '切换失败',
     },
     contextMenu: {
         copyUrl: '复制 URL 链接',
@@ -227,8 +218,7 @@ export function getSystemLocale(): Locale {
     try {
         const obsidianLanguage = getLanguage();
         return obsidianLanguage.toLowerCase().startsWith('zh') ? 'zh' : 'en';
-    } catch (e) {
-        console.error('Failed to get locale setting:', e);
+    } catch {
         // 如果 getLanguage 失败，使用浏览器语言作为后备
         const browserLanguage = navigator.language || 'en';
         return browserLanguage.startsWith('zh') ? 'zh' : 'en';
