@@ -21,6 +21,7 @@ export interface LangPack {
         password: string;
         remoteDir: SettingItem;
         urlPrefix: SettingItem;
+        downloadPath: SettingItem;
         deleteServer: string;
         defaultServer: string;
         defaultServerDesc: string;
@@ -56,6 +57,18 @@ export interface LangPack {
         selectServer: string;
         switchSuccess: string;
     };
+    contextMenu: {
+        copyUrl: string;
+        download: string;
+        downloading: string;
+        urlCopied: string;
+        copyFailed: string;
+        downloadSuccess: string;
+        downloadFailed: string;
+        connectionError: string;
+        fileTooLarge: string;
+        writePermissionError: string;
+    }
 }
 
 // 英文语言包
@@ -77,7 +90,11 @@ const en: LangPack = {
         },
         urlPrefix: {
             name: 'URL prefix',
-            desc: 'URL prefix to replace,otherwise keep it empty (e.g., http://192.168.0.1:8080/dav)'
+            desc: 'URL prefix to replace,otherwise keep it empty'
+        },
+        downloadPath: {
+            name: 'Download path',
+            desc: 'Path to save downloaded files (leave empty to use default folder, set to "/" to use root directory)',
         },
         deleteServer: 'Delete server',
         defaultServer: 'Default server',
@@ -113,6 +130,18 @@ const en: LangPack = {
         sortByDateDesc: 'Date (new-old)',
         selectServer: 'Choose a server',
         switchSuccess: 'Switch success',
+    },
+    contextMenu: {
+        copyUrl: 'Copy URL link',
+        download: 'Download to local',
+        downloading: 'Downloading',
+        urlCopied: 'URL copied to clipboard',
+        copyFailed: 'Copy failed',
+        downloadSuccess: 'Download success',
+        downloadFailed: 'Download failed',
+        connectionError: 'Connection error',
+        fileTooLarge: 'File too large',
+        writePermissionError: 'Write permission error',
     }
 };
 
@@ -135,7 +164,11 @@ const zh: LangPack = {
         },
         urlPrefix: {
             name: 'URL前缀替换',
-            desc: '替换拖拽生成的URL前缀,否则保持为空（例如：http://192.168.0.1:8080/dav）'
+            desc: '替换拖拽生成的URL前缀,否则保持为空'
+        },
+        downloadPath: {
+            name: '下载路径',
+            desc: '文件下载到本地的保存路径（留空则使用默认文件夹，设置为 / 则使用根目录）',
         },
         deleteServer: '删除服务器',
         defaultServer: '默认服务器',
@@ -171,6 +204,18 @@ const zh: LangPack = {
         sortByDateDesc: '日期（新-旧）',
         selectServer: '选择服务器',
         switchSuccess: '切换成功',
+    },
+    contextMenu: {
+        copyUrl: '复制 URL 链接',
+        download: '下载到本地',
+        downloading: '下载中',
+        urlCopied: 'URL 已复制到剪贴板',
+        copyFailed: '复制失败',
+        downloadSuccess: '下载成功',
+        downloadFailed: '下载失败',
+        connectionError: '连接错误',
+        fileTooLarge: '文件过大',
+        writePermissionError: '写入权限错误',
     }
 };
 

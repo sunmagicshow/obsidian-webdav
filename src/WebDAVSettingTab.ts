@@ -16,8 +16,8 @@ export class WebDAVSettingTab extends PluginSettingTab {
         const t = this.plugin.i18n();
 
         containerEl.empty();
-
-        // 默认服务器设置 - 只在有服务器时显示
+        containerEl.addClass('webdav-setting-tab');
+        // 默认服务器设置
         if (this.plugin.settings.servers.length > 0) {
             const defaultServerSetting = new Setting(containerEl)
                 .setName(t.settings.defaultServer)
@@ -55,119 +55,8 @@ export class WebDAVSettingTab extends PluginSettingTab {
         } else {
             // 显示所有服务器配置
             this.plugin.settings.servers.forEach((server, index) => {
-                // 创建服务器标题和删除按钮
-                const serverSetting = new Setting(serversContainer)
-                    .setName(server.name)
-                    .setDesc(this.getServerDescription(server))
-                    .addButton(button => {
-                        button
-                            .setIcon('trash-2')
-                            .setTooltip(t.settings.deleteServer)
-                            .onClick(async () => {
-                                if (this.plugin.settings.servers.length === 1) {
-                                    new Notice(t.settings.deleteNotice);
-                                    return;
-                                }
+                this.renderServerSettings(server, index, serversContainer);
 
-                                const isDeletingDefault = server.isDefault;
-                                this.plugin.settings.servers.splice(index, 1);
-
-                                if (isDeletingDefault) {
-                                    const newDefault = this.plugin.settings.servers[0];
-                                    newDefault.isDefault = true;
-                                    this.plugin.settings.currentServerId = newDefault.id;
-                                }
-
-                                await this.plugin.saveSettings();
-                                this.display();
-                            });
-                    });
-
-                // 服务器名称输入框
-                serverSetting.addText(text => {
-                    text
-                        .setPlaceholder(t.settings.serverName)
-                        .setValue(server.name)
-                        .onChange(async (value: string) => {
-                            server.name = value.trim();
-                            await this.plugin.saveSettings();
-                            serverSetting.setName(server.name);
-                            serverSetting.setDesc(this.getServerDescription(server));
-                            this.updateDefaultServerDropdown();
-                        });
-                });
-
-                // URL配置
-                new Setting(serversContainer)
-                    .setName(t.settings.url.name)
-                    .setDesc(t.settings.url.desc)
-                    .addText(text => {
-                        text
-                            .setPlaceholder('http://192.168.0.1:8888/dav')
-                            .setValue(server.url)
-                            .onChange(async (value: string) => {
-                                server.url = value.trim();
-                                await this.plugin.saveSettings();
-                                serverSetting.setDesc(this.getServerDescription(server));
-                            });
-                    });
-
-                // 用户名配置
-                new Setting(serversContainer)
-                    .setName(t.settings.username)
-                    .addText(text => {
-                        text
-                            .setPlaceholder(t.settings.username)
-                            .setValue(server.username)
-                            .onChange(async (value: string) => {
-                                server.username = value.trim();
-                                await this.plugin.saveSettings();
-                            });
-                    });
-
-                // 密码配置
-                new Setting(serversContainer)
-                    .setName(t.settings.password)
-                    .addText(text => {
-                        text
-                            .setPlaceholder(t.settings.password)
-                            .setValue(server.password)
-                        text.inputEl.type = 'password';
-                        text.onChange(async (value: string) => {
-                            server.password = value;
-                            await this.plugin.saveSettings();
-                        });
-                    });
-
-                // 远程目录配置
-                new Setting(serversContainer)
-                    .setName(t.settings.remoteDir.name)
-                    .setDesc(t.settings.remoteDir.desc)
-                    .addText(text => {
-                        text
-                            .setPlaceholder('/')
-                            .setValue(server.remoteDir)
-                            .onChange(async (value: string) => {
-                                server.remoteDir = value.trim();
-                                await this.plugin.saveSettings();
-                                serverSetting.setDesc(this.getServerDescription(server));
-                            });
-                    });
-
-                //  URL前缀配置
-                new Setting(serversContainer)
-                    .setName(t.settings.urlPrefix.name)
-                    .setDesc(t.settings.urlPrefix.desc)
-                    .addText(text => {
-                        text
-                            .setPlaceholder('')
-                            .setValue(server.urlPrefix)
-                            .onChange(async (value: string) => {
-                                server.urlPrefix = value.trim();
-                                await this.plugin.saveSettings();
-                                serverSetting.setDesc(this.getServerDescription(server));
-                            });
-                    });
                 // 分隔线
                 if (index < this.plugin.settings.servers.length - 1) {
                     serversContainer.createEl('hr');
@@ -175,8 +64,153 @@ export class WebDAVSettingTab extends PluginSettingTab {
             });
         }
 
-        // 添加服务器按钮 - 始终显示
-        new Setting(serversContainer)
+        // 添加服务器按钮
+        this.renderAddServerButton(serversContainer);
+    }
+
+    private renderServerSettings(server: WebDAVServer, index: number, container: HTMLElement): void {
+        const t = this.plugin.i18n();
+
+        // 服务器标题和删除按钮
+        const serverSetting = new Setting(container)
+            .setName(server.name)
+            .setDesc(this.getServerDescription(server))
+            .addButton(button => {
+                button
+                    .setIcon('trash-2')
+                    .setTooltip(t.settings.deleteServer)
+                    .onClick(async () => {
+                        if (this.plugin.settings.servers.length === 1) {
+                            new Notice(t.settings.deleteNotice);
+                            return;
+                        }
+
+                        const isDeletingDefault = server.isDefault;
+                        this.plugin.settings.servers.splice(index, 1);
+
+                        if (isDeletingDefault) {
+                            const newDefault = this.plugin.settings.servers[0];
+                            newDefault.isDefault = true;
+                            this.plugin.settings.currentServerId = newDefault.id;
+                        }
+
+                        await this.plugin.saveSettings();
+                        this.display();
+                    });
+            });
+
+        // 服务器名称
+        serverSetting.addText(text => {
+            text
+                .setPlaceholder(t.settings.serverName)
+                .setValue(server.name)
+                .onChange(async (value: string) => {
+                    server.name = value.trim();
+                    await this.plugin.saveSettings();
+                    serverSetting.setName(server.name);
+                    serverSetting.setDesc(this.getServerDescription(server));
+                    this.updateDefaultServerDropdown();
+                });
+        });
+
+        // 基础设置
+        this.renderSettings(server, container);
+
+
+    }
+
+    private renderSettings(server: WebDAVServer, container: HTMLElement): void {
+        const t = this.plugin.i18n();
+
+        // URL配置
+        new Setting(container)
+            .setName(t.settings.url.name)
+            .setDesc(t.settings.url.desc)
+            .addText(text => {
+                text
+                    .setPlaceholder('http://192.168.0.1:8080/dav')
+                    .setValue(server.url)
+                    .onChange(async (value: string) => {
+                        server.url = value.trim();
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 用户名配置
+        new Setting(container)
+            .setName(t.settings.username)
+            .addText(text => {
+                text
+                    .setPlaceholder(t.settings.username)
+                    .setValue(server.username)
+                    .onChange(async (value: string) => {
+                        server.username = value.trim();
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 密码配置
+        new Setting(container)
+            .setName(t.settings.password)
+            .addText(text => {
+                text
+                    .setPlaceholder(t.settings.password)
+                    .setValue(server.password)
+                text.inputEl.type = 'password';
+                text.onChange(async (value: string) => {
+                    server.password = value;
+                    await this.plugin.saveSettings();
+                });
+            });
+
+
+        // 远程目录配置
+        new Setting(container)
+            .setName(t.settings.remoteDir.name)
+            .setDesc(t.settings.remoteDir.desc)
+            .addText(text => {
+                text
+                    .setPlaceholder('/')
+                    .setValue(server.remoteDir)
+                    .onChange(async (value: string) => {
+                        server.remoteDir = value.trim();
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // URL前缀配置
+        new Setting(container)
+            .setName(t.settings.urlPrefix.name)
+            .setDesc(t.settings.urlPrefix.desc)
+            .addText(text => {
+                text
+                    .setPlaceholder('http://192.168.0.1:8000/dav')
+                    .setValue(server.urlPrefix)
+                    .onChange(async (value: string) => {
+                        server.urlPrefix = value.trim();
+                        await this.plugin.saveSettings();
+                    });
+            });
+
+        // 下载路径配置
+        new Setting(container)
+            .setName(t.settings.downloadPath.name)
+            .setDesc(t.settings.downloadPath.desc)
+            .addText(text => {
+                text
+                    .setPlaceholder("/WebDAV Downloads")
+                    .setValue(server.downloadPath || '')
+                    .onChange(async (value: string) => {
+                        server.downloadPath = value.trim();
+                        await this.plugin.saveSettings();
+                    });
+            });
+    }
+
+    private renderAddServerButton(container: HTMLElement): void {
+        const t = this.plugin.i18n();
+
+        new Setting(container)
             .setName(t.settings.addServer)
             .addButton(button => {
                 button
@@ -206,8 +240,30 @@ export class WebDAVSettingTab extends PluginSettingTab {
             });
     }
 
-    private updateDefaultServerDropdown = (): void => {
+    private getServerDescription(server: WebDAVServer): string {
+        const t = this.plugin.i18n();
+        const parts = [];
+
+        parts.push(`ID: ${server.id}`);
+
+        if (server.remoteDir && server.remoteDir !== '/') {
+            parts.push(`${t.settings.remoteDir.name}: ${server.remoteDir}`);
+        }
+
+        if (server.downloadPath) {
+            parts.push(`${t.settings.downloadPath.name}: ${server.downloadPath}`);
+        }
+
+        if (server.isDefault) {
+            parts.push(`(${t.settings.defaultServer})`);
+        }
+
+        return parts.length > 0 ? parts.join(' | ') : t.settings.noServers;
+    }
+
+    private updateDefaultServerDropdown(): void {
         if (!this.defaultServerDropdown) return;
+
         const currentValue = this.defaultServerDropdown.getValue();
         this.defaultServerDropdown.selectEl.empty();
 
@@ -223,20 +279,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         }
     }
 
-    private getServerDescription = (server: WebDAVServer): string => {
-        const t = this.plugin.i18n(); // 获取 i18n 实例
-        const parts = [];
-        parts.push(`ID: ${server.id}`);
-        if (server.remoteDir && server.remoteDir !== '/') {
-            parts.push(`${t.settings.remoteDir.name}: ${server.remoteDir}`);
-        }
-        if (server.isDefault) {
-            parts.push(`(${t.settings.defaultServer})`);
-        }
-        return parts.length > 0 ? parts.join(' | ') : t.settings.noServers;
-    }
-
-    private generateId(this: void): string {
+    private generateId(): string {
         return 'server_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
     }
 }

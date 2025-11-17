@@ -1,7 +1,7 @@
-import {createClient, FileStat} from 'webdav';
-import {WebDAVServer} from './types';
+import {createClient, FileStat, ResponseDataDetailed} from 'webdav';
+import {IWebDAVClient, WebDAVServer} from './types';
 
-export class WebDAVClient {
+export class WebDAVClient implements IWebDAVClient {
     private client: ReturnType<typeof createClient> | null = null;
 
     constructor(private server: WebDAVServer) {
@@ -38,12 +38,28 @@ export class WebDAVClient {
         if (!this.client) {
             throw new Error('WebDAV client not initialized');
         }
+
         const result = await this.client.getDirectoryContents(path);
+
         if (Array.isArray(result)) {
             return result;
         } else {
-            return result.data;
+            return (result as ResponseDataDetailed<FileStat[]>).data;
         }
     }
 
+    async getFileContents(filePath: string): Promise<ArrayBuffer> {
+        if (!this.client) {
+            throw new Error('WebDAV client not initialized');
+        }
+
+        try {
+            return await this.client.getFileContents(filePath, {
+                format: 'binary',
+                details: false
+            }) as ArrayBuffer;
+        } catch {
+            throw new Error('Failed to get file contents');
+        }
+    }
 }
