@@ -75,7 +75,7 @@ export class WebDAVFileService {
         return normalizedPath;
     }
 
-    debounce<T extends (...args: any[]) => any>(
+    debounce<T extends (...args: unknown[]) => unknown>(
         func: T,
         wait: number
     ): (...args: Parameters<T>) => void {
