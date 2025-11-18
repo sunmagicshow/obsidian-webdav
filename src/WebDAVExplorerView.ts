@@ -36,8 +36,7 @@ export class WebDAVExplorerView extends View {
         return this.plugin.i18n();
     }
 
-    // 修复：声明 refresh 方法
-    refresh: () => void;
+    refresh: () => void = () => {};
 
     getViewType(): string {
         return VIEW_TYPE_WEBDAV_EXPLORER;
