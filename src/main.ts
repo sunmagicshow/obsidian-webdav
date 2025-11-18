@@ -34,14 +34,14 @@ export default class WebDAVPlugin extends Plugin {
 
     onunload() {
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER);
-
+        const t = this.i18n();
         // 卸载所有视图
         for (const leaf of leaves) {
             if (leaf.view && typeof leaf.view.onunload === 'function') {
                 try {
                     leaf.view.onunload();
                 } catch {
-                    
+                    new Notice(t.settings.unloadError);
                 }
             }
             leaf.detach();

@@ -31,6 +31,7 @@ export interface LangPack {
         serverListEmpty: string;
         duplicateName: string;
         nameRequired: string;
+        unloadError: string;
     };
     view: {
         connectionFailed: string;
@@ -100,6 +101,7 @@ const en: LangPack = {
         serverListEmpty: 'Please configure at least one webdav server in settings',
         duplicateName: 'Server name already exists, please use a different name',
         nameRequired: 'Server name cannot be empty',
+        unloadError: 'Failed to unload webdav explorer',
     },
     view: {
         connectionFailed: 'Connection failed',
@@ -169,6 +171,7 @@ const zh: LangPack = {
         serverListEmpty: '请在设置中配置至少一个 WebDAV 服务器',
         duplicateName: '服务器名称已存在，请使用其他名称',
         nameRequired: '服务器名称不能为空',
+        unloadError: '卸载 WebDAV 资源管理器失败',
     },
     view: {
         connectionFailed: '连接失败',

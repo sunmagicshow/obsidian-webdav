@@ -75,10 +75,13 @@ export class WebDAVFileService {
         return normalizedPath;
     }
 
-    debounce(func: (...args: unknown[]) => void, wait: number): (...args: unknown[]) => void {
+    debounce<T extends (...args: any[]) => any>(
+        func: T,
+        wait: number
+    ): (...args: Parameters<T>) => void {
         let timeout: number;
 
-        return (...args: unknown[]) => {
+        return (...args: Parameters<T>) => {
             clearTimeout(timeout);
             timeout = window.setTimeout(() => {
                 func(...args);
