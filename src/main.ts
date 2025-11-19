@@ -134,7 +134,7 @@ export default class WebDAVPlugin extends Plugin {
      * - 复用已存在的视图或创建新视图
      * - 在右侧面板显示
      */
-    activateView() {
+    async activateView() {
         const {workspace} = this.app;
 
         // 检查是否存在默认服务器配置
@@ -146,17 +146,17 @@ export default class WebDAVPlugin extends Plugin {
 
         // 设置当前服务器为默认服务器并保存设置
         this.settings.currentServerName = defaultServer.name;
-        this.saveData(this.settings);
+       await this.saveData(this.settings);
 
         // 查找已存在的 WebDAV 视图
         let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
 
         if (leaf) {
             // 显示已存在的视图并强制刷新
-             workspace.revealLeaf(leaf);
+             await workspace.revealLeaf(leaf);
             if (leaf.view instanceof WebDAVExplorerView) {
                 leaf.view.onunload();
-                leaf.view.onOpen();
+                await leaf.view.onOpen();
             }
             return;
         }
@@ -165,19 +165,19 @@ export default class WebDAVPlugin extends Plugin {
         const rightLeaf = workspace.getRightLeaf(false);
         if (rightLeaf) {
             // 在右侧面板创建视图
-            rightLeaf.setViewState({
+            await rightLeaf.setViewState({
                 type: VIEW_TYPE_WEBDAV_EXPLORER,
                 active: true,
             });
-            workspace.revealLeaf(rightLeaf);
+            await workspace.revealLeaf(rightLeaf);
         } else {
             // 分割当前标签页创建新视图
             const newLeaf = workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
-            newLeaf.setViewState({
+            await newLeaf.setViewState({
                 type: VIEW_TYPE_WEBDAV_EXPLORER,
                 active: true,
             });
-            workspace.revealLeaf(newLeaf);
+            await workspace.revealLeaf(newLeaf);
         }
     }
 

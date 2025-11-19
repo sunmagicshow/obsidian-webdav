@@ -257,7 +257,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
      *
      * @param serverName 新选择的服务器名称
      */
-    private handleDefaultServerChange(serverName: string): void {
+    private async handleDefaultServerChange(serverName: string): Promise<void> {
         // 验证输入有效性
         if (!serverName || this.plugin.settings.servers.length === 0) return;
 
@@ -268,7 +268,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         this.plugin.settings.currentServerName = serverName;
 
         // 保存设置并刷新界面
-        this.plugin.saveData(this.plugin.settings)
+        await this.plugin.saveData(this.plugin.settings)
         this.display();
     }
 
@@ -278,7 +278,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
      * @param server 服务器配置对象
      * @param newName 新的服务器名称
      */
-    private handleServerNameChange(server: WebDAVServer, newName: string): void {
+    private async handleServerNameChange(server: WebDAVServer, newName: string): Promise<void> {
         const trimmedName = newName.trim();
 
         // 验证名称非空
@@ -302,7 +302,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
             this.plugin.settings.currentServerName = trimmedName;
         }
 
-        this.plugin.saveData(this.plugin.settings)
+        await this.plugin.saveData(this.plugin.settings)
         this.updateDefaultServerDropdown();
     }
 
@@ -340,11 +340,11 @@ export class WebDAVSettingTab extends PluginSettingTab {
      * @param onChange 具体的变更处理函数
      * @param value 新的配置值
      */
-    private handleConfigChange(onChange: (value: string) => void, value: string): void {
+    private async handleConfigChange(onChange: (value: string) => void, value: string): Promise<void> {
         // 执行具体的配置更新逻辑
         onChange(value);
         // 保存设置到持久化存储
-        this.plugin.saveData(this.plugin.settings)
+        await this.plugin.saveData(this.plugin.settings)
     }
 
     /**
@@ -352,7 +352,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
      *
      * 创建新的服务器配置并添加到列表
      */
-    private handleAddServer(): void {
+    private async handleAddServer(): Promise<void> {
         const baseName = this.t.settings.serverName;
 
         // 生成唯一的服务器名称
@@ -384,7 +384,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
             this.plugin.settings.currentServerName = newServer.name;
         }
 
-        this.plugin.saveData(this.plugin.settings)
+        await this.plugin.saveData(this.plugin.settings)
         this.display();  // 重新渲染以显示新服务器
     }
 
