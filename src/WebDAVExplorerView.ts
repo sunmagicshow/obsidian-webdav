@@ -514,7 +514,7 @@ export class WebDAVExplorerView extends View {
         if (server) {
             // 更新插件设置
             this.plugin.settings.currentServerName = serverName;
-            await this.plugin.saveSettings();
+            this.plugin.saveData(this.plugin.settings);
 
             // 更新服务并重新构建视图
             this.explorerService.setCurrentServer(server);

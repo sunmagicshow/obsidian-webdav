@@ -80,7 +80,7 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
         const hasParent = this.currentPath !== this.rootPath;
         this.onFileListUpdate(files, hasParent);
 
-    } catch (error) {
+    } catch {
         if (retryCount < maxRetries) {
             setTimeout(() => {
                 void this.listDirectory(path, retryCount + 1);

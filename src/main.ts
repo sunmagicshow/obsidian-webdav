@@ -134,7 +134,7 @@ export default class WebDAVPlugin extends Plugin {
      * - 复用已存在的视图或创建新视图
      * - 在右侧面板显示
      */
-    async activateView() {
+    activateView() {
         const {workspace} = this.app;
 
         // 检查是否存在默认服务器配置
@@ -146,17 +146,17 @@ export default class WebDAVPlugin extends Plugin {
 
         // 设置当前服务器为默认服务器并保存设置
         this.settings.currentServerName = defaultServer.name;
-        await this.saveSettings();
+        this.saveData(this.settings);
 
         // 查找已存在的 WebDAV 视图
         let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
 
         if (leaf) {
             // 显示已存在的视图并强制刷新
-            await workspace.revealLeaf(leaf);
+             workspace.revealLeaf(leaf);
             if (leaf.view instanceof WebDAVExplorerView) {
                 leaf.view.onunload();
-                await leaf.view.onOpen();
+                leaf.view.onOpen();
             }
             return;
         }
@@ -165,19 +165,19 @@ export default class WebDAVPlugin extends Plugin {
         const rightLeaf = workspace.getRightLeaf(false);
         if (rightLeaf) {
             // 在右侧面板创建视图
-            await rightLeaf.setViewState({
+            rightLeaf.setViewState({
                 type: VIEW_TYPE_WEBDAV_EXPLORER,
                 active: true,
             });
-            await workspace.revealLeaf(rightLeaf);
+            workspace.revealLeaf(rightLeaf);
         } else {
             // 分割当前标签页创建新视图
             const newLeaf = workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
-            await newLeaf.setViewState({
+            newLeaf.setViewState({
                 type: VIEW_TYPE_WEBDAV_EXPLORER,
                 active: true,
             });
-            await workspace.revealLeaf(newLeaf);
+            workspace.revealLeaf(newLeaf);
         }
     }
 
@@ -188,21 +188,6 @@ export default class WebDAVPlugin extends Plugin {
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
-
-    // ==================== 工具方法 ====================
-
-    /**
-     * 保存插件设置到持久化存储
-     */
-    async saveSettings() {
-        await this.saveData(this.settings);
-    }
-
-    /**
-     * 获取国际化文本
-     * @returns 当前语言包
-     */
-
 
     /**
      * 通知所有视图服务器配置已变更

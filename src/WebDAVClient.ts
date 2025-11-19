@@ -45,7 +45,7 @@ export class WebDAVClient implements IWebDAVClient {
             // 测试连接：尝试获取根目录内容
             await this.client.getDirectoryContents('/');
             return true;
-        } catch (error) {
+        } catch {
             // 连接失败，重置客户端实例
             this.client = null;
             return false;
@@ -91,7 +91,7 @@ export class WebDAVClient implements IWebDAVClient {
                 format: 'binary',    // 指定返回二进制格式
                 details: false       // 不返回详细信息，只返回文件内容
             }) as ArrayBuffer;
-        } catch (error) {
+        } catch {
             throw new Error('Failed to get file contents');
         }
     }
