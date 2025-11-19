@@ -23,6 +23,12 @@ export interface WebDAVSettings {
     currentServerName: string;
 }
 
+// 定义WebDAV插件的默认设置
+export const DEFAULT_SETTINGS: WebDAVSettings = {
+    servers: [],
+    currentServerName: '',
+};
+
 // 定义WebDAV客户端的接口
 export interface IWebDAVClient {
     initialize(): Promise<boolean>;
@@ -30,7 +36,6 @@ export interface IWebDAVClient {
     getFileContents(filePath: string): Promise<ArrayBuffer>;
 }
 
-// App 设置扩展接口
 // 扩展App接口以支持插件设置功能
 export interface AppWithSettings extends App {
     setting: {
@@ -40,9 +45,3 @@ export interface AppWithSettings extends App {
     };
 }
 
-// 默认设置
-// 定义WebDAV插件的默认设置
-export const DEFAULT_SETTINGS: WebDAVSettings = {
-    servers: [],
-    currentServerName: '',
-};

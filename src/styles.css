@@ -1,300 +1,251 @@
 /* ==================== 基础布局和容器 ==================== */
 .webdav-explorer-view {
-	height: 100%;
-	display: flex;
-	flex-direction: column;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 /* ==================== 头部区域 ==================== */
 .webdav-header {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	padding: 10px 0;
-	border-bottom: 1px solid var(--background-modifier-border);
-	margin-bottom: 10px;
-	flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+    margin-bottom: 10px;
+    flex-shrink: 0;
 }
 
 .webdav-title-row {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
 }
 
 .webdav-actions-container {
-	display: flex;
-	align-items: center;
-	gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 /* ==================== 按钮样式 ==================== */
 .webdav-button {
-	display: flex;
-	align-items: center;
-	padding: 6px 8px;
-	border-radius: 4px;
-	cursor: pointer;
-	transition: all 0.15s ease;
-	color: var(--text-muted);
-	border: 1px solid var(--background-modifier-border);
-	background-color: var(--background-primary);
-	user-select: none;
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--text-muted);
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    user-select: none;
 }
 
 .webdav-button:hover {
-	background-color: var(--background-modifier-hover);
-	color: var(--text-normal);
-	border-color: var(--background-modifier-border-hover);
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+    border-color: var(--background-modifier-border-hover);
 }
 
 .webdav-button-content {
-	display: flex;
-	align-items: center;
-	gap: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .webdav-server-icon,
 .webdav-refresh-icon,
 .webdav-sort-icon {
-	display: flex;
-	align-items: center;
-	width: 16px;
-	height: 16px;
+    display: flex;
+    align-items: center;
+    width: 16px;
+    height: 16px;
 }
 
 /* ==================== 面包屑导航 ==================== */
 .webdav-breadcrumb-container {
-	padding: 0 8px;
+    padding: 0 8px;
 }
 
 .webdav-breadcrumb {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 4px;
-	font-size: 0.9em;
-	color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.9em;
+    color: var(--text-muted);
 }
 
 .breadcrumb-item {
-	display: flex;
-	align-items: center;
+    display: flex;
+    align-items: center;
 }
 
 .breadcrumb-item a {
-	display: flex;
-	align-items: center;
-	text-decoration: none;
-	color: var(--text-muted);
-	padding: 2px 6px;
-	border-radius: 3px;
-	transition: all 0.15s ease;
-	cursor: pointer;
-	max-width: 120px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-muted);
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .breadcrumb-item a:hover {
-	background-color: var(--background-modifier-hover);
-	color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
 }
 
 .breadcrumb-current {
-	color: var(--text-normal) !important;
-	font-weight: 500;
-	cursor: default !important;
-	background: none !important;
+    color: var(--text-normal) !important;
+    font-weight: 500;
+    cursor: default !important;
+    background: none !important;
 }
 
 .breadcrumb-separator {
-	display: flex;
-	align-items: center;
-	color: var(--text-faint);
-	user-select: none;
+    display: flex;
+    align-items: center;
+    color: var(--text-faint);
+    user-select: none;
 }
 
 .breadcrumb-separator svg {
-	width: 14px;
-	height: 14px;
-	opacity: 0.5;
+    width: 14px;
+    height: 14px;
+    opacity: 0.5;
 }
 
 .breadcrumb-root {
-	display: flex;
-	align-items: center;
+    display: flex;
+    align-items: center;
 }
 
 .breadcrumb-root-link {
-	display: flex;
-	align-items: center;
-	padding: 2px 6px;
-	border-radius: 3px;
-	transition: all 0.15s ease;
-	cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+    cursor: pointer;
 }
 
 .breadcrumb-root-link:hover {
-	background-color: var(--background-modifier-hover);
+    background-color: var(--background-modifier-hover);
 }
 
 /* ==================== 文件列表区域 ==================== */
 .file-list-container {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .file-list {
-	flex: 1;
-	overflow-y: auto;
-	overflow-x: hidden;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* 滚动条样式 */
 .file-list::-webkit-scrollbar {
-	width: 8px;
+    width: 8px;
 }
 
 .file-list::-webkit-scrollbar-track {
-	background: var(--background-primary);
+    background: var(--background-primary);
 }
 
 .file-list::-webkit-scrollbar-thumb {
-	background: var(--background-modifier-border);
-	border-radius: 4px;
+    background: var(--background-modifier-border);
+    border-radius: 4px;
 }
 
 .file-list::-webkit-scrollbar-thumb:hover {
-	background: var(--background-modifier-border-hover);
+    background: var(--background-modifier-border-hover);
 }
 
 /* ==================== 文件项样式 ==================== */
 .file-item {
-	padding: 8px 12px;
-	margin: 2px 0;
-	cursor: pointer;
-	transition: all 0.15s ease;
-	user-select: none;
-	border-radius: 6px;
-	border: 1px solid transparent;
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	min-height: 28px;
-	box-sizing: border-box;
+    padding: 8px 12px;
+    margin: 2px 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    box-sizing: border-box;
 }
 
 .is-clickable {
-	cursor: pointer;
+    cursor: pointer;
 }
 
 .file-item.folder .file-name {
-	color: var(--text-normal);
-	font-weight: 500;
+    color: var(--text-normal);
+    font-weight: 500;
 }
 
 .file-item.file .file-name {
-	color: var(--text-muted);
+    color: var(--text-muted);
 }
 
 .file-item.selected {
-	background-color: var(--interactive-accent);
-	color: var(--text-on-accent);
-	border-radius: 4px;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-radius: 4px;
 }
 
 .file-item.selected .file-name {
-	color: var(--text-on-accent) !important;
+    color: var(--text-on-accent) !important;
 }
 
 .file-item:hover:not(.selected) {
-	background-color: var(--background-modifier-hover);
-	border-radius: 4px;
+    background-color: var(--background-modifier-hover);
+    border-radius: 4px;
 }
 
 .file-icon {
-	width: 16px;
-	height: 16px;
-	flex-shrink: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 14px;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
 }
 
 .file-name {
-	flex: 1;
-	min-width: 0;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* ==================== 特殊状态文件项 ==================== */
 .file-item.empty {
-	color: var(--text-muted);
-	font-style: italic;
-	cursor: default;
+    color: var(--text-muted);
+    font-style: italic;
+    cursor: default;
 }
 
-.file-item.error {
-	color: var(--text-error);
-	cursor: default;
-}
-
-.file-item.loading {
-	justify-content: flex-start;
-	gap: 8px;
-	color: var(--text-muted);
-}
-
-.loading-icon {
-	animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-	from { transform: rotate(0deg); }
-	to { transform: rotate(360deg); }
-}
 
 /* ==================== 设置选项卡样式 ==================== */
-.webdav-dropdown {
-	min-width: 200px;
-}
-
-.webdav-setting-tab .setting-item-control input[type="text"],
-.webdav-setting-tab .setting-item-control input[type="password"] {
-	width: 100%;
-	min-width: 200px;
-	max-width: 200px;
-}
-
-/* ==================== 错误和空状态页面 ==================== */
-.webdav-no-server {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
-	gap: 16px;
-	padding: 20px;
-	text-align: center;
-}
-
-.webdav-no-server p {
-	margin: 0;
-	color: var(--text-muted);
-	font-size: 1.1em;
-}
-
-.webdav-no-servers {
-	text-align: center;
-	color: var(--text-muted);
-	font-style: italic;
-	padding: 20px;
+.webdav-dropdown,
+.setting-item-control input[type="text"],
+.setting-item-control input[type="password"] {
+    min-width: 200px;
 }

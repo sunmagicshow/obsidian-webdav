@@ -25,6 +25,7 @@ export interface LangPack {
         duplicateName: string;
         nameRequired: string;
         unloadError: string;
+        noServersAvailable: string;
     };
     view: {
         connectionFailed: string;
@@ -82,10 +83,11 @@ const en: LangPack = {
         defaultServerDesc: 'Default server when opening explorer',
         serverName: 'Server name',
         deleteNotice: 'Cannot delete the last server',
-        serverListEmpty: 'Please configure at least one WebDAV server',
+        serverListEmpty: 'Server list is empty',
         duplicateName: 'Server name already exists',
         nameRequired: 'Server name cannot be empty',
         unloadError: 'Failed to unload WebDAV explorer',
+        noServersAvailable   : 'No servers available',
     },
     view: {
         connectionFailed: 'Connection failed',
@@ -143,10 +145,11 @@ const zh: LangPack = {
         defaultServerDesc: '打开资源管理器时的默认服务器',
         serverName: '服务器名称',
         deleteNotice: '无法删除最后一个服务器',
-        serverListEmpty: '请配置至少一个 WebDAV 服务器',
+        serverListEmpty: '服务器列表为空',
         duplicateName: '服务器名称已存在',
         nameRequired: '服务器名称不能为空',
         unloadError: '卸载 WebDAV 资源管理器失败',
+        noServersAvailable: '没有可用的服务器',
     },
     view: {
         connectionFailed: '连接失败',

@@ -1,96 +1,202 @@
 import {WorkspaceLeaf, View, Notice, Menu, MarkdownView, setIcon} from 'obsidian';
 import {FileStat} from 'webdav';
 import WebDAVPlugin from './main';
-import {WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
-import {WebDAVClient} from './WebDAVClient';
+import {VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 import {WebDAVFileService} from './WebDAVFileService';
+import {WebDAVExplorerService} from './WebDAVExplorerService';
 
+/**
+ * WebDAV 文件浏览器视图
+ * 负责渲染 WebDAV 服务器的文件列表，处理用户交互和文件操作
+ */
 export class WebDAVExplorerView extends View {
+    /** 插件实例引用 */
     plugin: WebDAVPlugin;
-    client: WebDAVClient | null = null;
+
+    /** 文件服务实例，处理文件下载等操作 */
     fileService: WebDAVFileService;
 
-    // 状态属性
-    private currentPath: string = '/';
-    private rootPath: string = '/';
-    private currentServer: WebDAVServer | null = null;
-    private selectedItem: HTMLElement | null = null;
-    private sortField: 'name' | 'type' | 'size' | 'date' = 'name';
-    private sortOrder: 'asc' | 'desc' = 'asc';
+    /** 浏览器服务实例，处理 WebDAV 相关业务逻辑 */
+    private explorerService: WebDAVExplorerService;
 
-    // DOM 元素引用
-    private serverSelector: HTMLElement | null = null;
+    // ==================== 视图状态 ====================
+
+    /** 当前选中的文件项元素 */
+    private selectedItem: HTMLElement | null = null;
+
+    // ==================== DOM 元素引用 ====================
+
+    /** 排序按钮元素 */
     private sortButton: HTMLElement | null = null;
+
+    /** 排序图标元素 */
     private sortIconEl: HTMLElement | null = null;
 
+    /** 头部容器元素 */
+    private headerEl: HTMLElement | null = null;
+
+    /** 内容区域容器元素 */
+    private contentEl: HTMLElement | null = null;
+
+    /**
+     * 构造函数
+     * @param leaf - 工作区叶子节点
+     * @param plugin - WebDAV 插件实例
+     */
     constructor(leaf: WorkspaceLeaf, plugin: WebDAVPlugin) {
         super(leaf);
         this.plugin = plugin;
         this.fileService = new WebDAVFileService(this.app);
 
-        // 防抖刷新
+        // 初始化浏览器服务，注入回调函数
+        this.explorerService = new WebDAVExplorerService(
+            plugin,
+            this.fileService,
+            (files, hasParent) => this.handleFileListUpdate(files, hasParent),
+            () => this.updateBreadcrumb(),
+            (message, isError = true) => this.showNotice(message, isError)
+        );
+
+        // 使用防抖函数包装刷新方法，避免频繁调用
         this.refresh = this.fileService.debounce(this.executeRefresh.bind(this), 300);
     }
 
+    /**
+     * 获取国际化翻译工具
+     * @returns 翻译函数
+     */
     private get t() {
         return this.plugin.i18n();
     }
 
-    refresh: () => void = () => {};
+    // ==================== 核心生命周期方法 ====================
 
+    /** 防抖处理的刷新方法 */
+    public refresh: () => void = () => {
+    };
+
+    /**
+     * 获取视图类型标识
+     * @returns 视图类型字符串
+     */
     getViewType(): string {
         return VIEW_TYPE_WEBDAV_EXPLORER;
     }
 
+    /**
+     * 获取视图显示文本
+     * @returns 显示文本
+     */
     getDisplayText(): string {
-        return this.plugin.i18n().displayName;
+        return this.t.displayName;
     }
 
+    /**
+     * 获取视图图标
+     * @returns 图标名称
+     */
     getIcon(): string {
         return 'cloud';
     }
 
+    /**
+     * 视图打开时的初始化方法
+     */
     async onOpen() {
+        // 清空容器并添加 CSS 类
         this.containerEl.empty();
-        this.containerEl.addClass('webdav-explorer-view'); // 修复：分开调用
-        this.currentServer = this.plugin.getCurrentServer();
+        this.containerEl.addClass('webdav-explorer-view');
 
-        if (!this.currentServer) {
-            this.showNoServerConfigured();
+        // 获取当前服务器配置并构建布局
+        const currentServer = this.plugin.getCurrentServer();
+        this.explorerService.setCurrentServer(currentServer);
+        this.buildLayout();
+
+        // 如果没有选择服务器，显示提示信息
+        if (!currentServer) {
+            this.showNotice(this.t.view.selectServer, true);
             return;
         }
 
-        this.buildHeader();
+        // 连接服务器并加载文件列表
         await this.connectAndList();
     }
 
-    // ==================== 主要方法 ====================
-
+    /**
+     * 视图卸载时的清理方法
+     */
     onunload() {
-        this.client = null;
         this.selectedItem = null;
-        this.currentServer = null;
+        this.containerEl?.empty();
+    }
 
-        if (this.containerEl) {
-            this.containerEl.empty();
+    /**
+     * 服务器配置变更时的处理
+     * 同步更新服务端配置，异步执行连接和列表刷新
+     */
+    public onServerChanged(): void {
+        const newCurrentServer = this.plugin.getCurrentServer();
+        this.explorerService.setCurrentServer(newCurrentServer);
+        this.rebuildView();
+
+        // 如果选择了新服务器，异步连接并刷新列表
+        if (newCurrentServer) {
+            this.connectAndList().catch(() => {
+                // 错误已在 connectAndList 中处理，此处静默捕获
+            });
         }
     }
 
-    private buildHeader(): void {
-        const headerEl = this.containerEl.createEl('div', {cls: 'webdav-header'});
-        const titleRow = headerEl.createEl('div', {cls: 'webdav-title-row'});
+    // ==================== 视图构建方法 ====================
+
+    /**
+     * 构建视图整体布局
+     */
+    private buildLayout(): void {
+        this.headerEl = this.containerEl.createEl('div', {cls: 'webdav-header'});
+        this.contentEl = this.containerEl.createEl('div', {cls: 'webdav-content'});
+        this.buildHeaderContent();
+    }
+
+    /**
+     * 重新构建视图（用于服务器切换等场景）
+     */
+    private rebuildView(): void {
+        this.containerEl.empty();
+        this.containerEl.addClass('webdav-explorer-view');
+        this.buildLayout();
+    }
+
+    /**
+     * 构建头部内容区域
+     */
+    private buildHeaderContent(): void {
+        if (!this.headerEl) return;
+
+        this.headerEl.empty();
+        const titleRow = this.headerEl.createEl('div', {cls: 'webdav-title-row'});
         const actionsContainer = titleRow.createEl('div', {cls: 'webdav-actions-container'});
 
-        // 服务器选择器
-        this.serverSelector = actionsContainer.createEl('div', {cls: 'webdav-button'});
-        const serverContent = this.serverSelector.createEl('div', {cls: 'webdav-button-content'});
+        // 构建操作按钮和面包屑导航
+        this.buildActionButtons(actionsContainer);
+        this.buildBreadcrumb();
+    }
+
+    /**
+     * 构建操作按钮区域
+     * @param container - 按钮容器元素
+     */
+    private buildActionButtons(container: HTMLElement): void {
+        // 服务器选择按钮
+        const serverButton = container.createEl('div', {cls: 'webdav-button'});
+        const serverContent = serverButton.createEl('div', {cls: 'webdav-button-content'});
         const serverIconEl = serverContent.createSpan({cls: 'webdav-server-icon'});
         setIcon(serverIconEl, 'server');
-        this.serverSelector.setAttribute('aria-label', this.t.view.selectServer);
-        this.serverSelector.onclick = (evt) => this.showServerMenu(evt);
+        serverButton.setAttribute('aria-label', this.t.view.selectServer);
+        serverButton.onclick = (evt) => this.showServerMenu(evt);
 
         // 刷新按钮
-        const refreshButton = actionsContainer.createEl('div', {cls: 'webdav-button'});
+        const refreshButton = container.createEl('div', {cls: 'webdav-button'});
         const refreshContent = refreshButton.createEl('div', {cls: 'webdav-button-content'});
         const refreshIcon = refreshContent.createSpan({cls: 'webdav-refresh-icon'});
         setIcon(refreshIcon, 'refresh-cw');
@@ -98,360 +204,157 @@ export class WebDAVExplorerView extends View {
         refreshButton.onclick = () => this.refresh();
 
         // 排序按钮
-        this.sortButton = actionsContainer.createEl('div', {cls: 'webdav-button'});
+        this.sortButton = container.createEl('div', {cls: 'webdav-button'});
         const sortContent = this.sortButton.createEl('div', {cls: 'webdav-button-content'});
         this.sortIconEl = sortContent.createSpan({cls: 'webdav-sort-icon'});
         this.updateSortIcon();
         this.sortButton.setAttribute('aria-label', this.t.view.sort);
         this.sortButton.onclick = (evt) => this.showSortMenu(evt);
-
-        // 面包屑容器 - 总是创建
-        const breadcrumbContainer = headerEl.createEl('div', {cls: 'webdav-breadcrumb-container'});
-        const breadcrumbEl = breadcrumbContainer.createEl('div', {cls: 'webdav-breadcrumb'});
-
-        // 创建根目录面包屑
-        const rootItem = breadcrumbEl.createEl('span', {cls: 'breadcrumb-item breadcrumb-root'});
-        const rootLink = rootItem.createEl('a', {cls: 'breadcrumb-root-link'});
-        setIcon(rootLink, 'home');
-        rootLink.title = this.t.view.rootDirectory;
-        rootLink.onclick = async () => {
-            if (this.currentServer) {
-                await this.listDirectory(this.rootPath);
-            }
-        };
     }
 
-    private async connectAndList(): Promise<boolean> {
-        if (!this.currentServer) {
-            this.showNoServerConfigured();
-            return false;
-        }
-
-        const {url, username, password} = this.currentServer;
-
-        if (!url || !username || !password) {
-            this.showNoServerConfigured();
-            return false;
-        }
-
-        try {
-            const success = await this.initializeClient();
-            if (!success) {
-                // 初始化失败，显示连接失败界面
-                this.showConnectionFailed();
-                this.showNotice(this.t.view.connectionFailed, true);
-                return false;
-            }
-
-            await this.listDirectory(this.currentPath);
-            return true;
-        } catch {
-            this.showConnectionFailed();
-            this.showNotice(this.t.view.connectionFailed, true);
-            return false;
-        }
+    /**
+     * 构建面包屑导航
+     */
+    private buildBreadcrumb(): void {
+        const breadcrumbContainer = this.headerEl!.createEl('div', {cls: 'webdav-breadcrumb-container'});
+        breadcrumbContainer.createEl('div', {cls: 'webdav-breadcrumb'});
+        this.updateBreadcrumb();
     }
 
-    // ==================== 文件操作 ====================
+    // ==================== 文件列表渲染 ====================
 
-    private async listDirectory(path: string, retryCount: number = 0): Promise<void> {
-        if (!this.currentServer) return;
+    /**
+     * 处理文件列表更新回调
+     * @param files - 文件列表数据
+     * @param hasParent - 是否有上级目录
+     */
+    private handleFileListUpdate(files: FileStat[], hasParent: boolean): void {
+        if (!this.contentEl) return;
 
-        const maxRetries = 3;
-        const retryDelay = 1000;
-
-        if (!this.client) {
-            const success = await this.initializeClient();
-            if (!success) {
-                // 改为使用 Notice 提示
-                this.showNotice(this.t.view.connectionFailed, true);
-                return;
-            }
-        }
-
-        const rootPath = this.getRootPath();
-        let normalizedPath = this.fileService.normalizePath(path, rootPath);
-        this.rootPath = rootPath;
-        this.currentPath = normalizedPath;
-
-        this.createBreadcrumb(normalizedPath);
-
-        const container = this.containerEl;
-        const oldList = container.querySelector('.file-list-container');
-        if (oldList) oldList.remove();
-
-        this.selectedItem = null;
-
-        const listContainer = container.createEl('div', {cls: 'file-list-container'});
+        this.contentEl.empty();
+        const listContainer = this.contentEl.createEl('div', {cls: 'file-list-container'});
         const fileList = listContainer.createEl('div', {cls: 'file-list'});
 
-        // 只在第一次尝试时显示加载中，重试时不重复显示
-        let loadingEl: HTMLElement | null = null;
-        if (retryCount === 0) {
-            loadingEl = fileList.createEl('div', {cls: 'file-item loading'});
-            const loadingIcon = loadingEl.createSpan({cls: 'loading-icon'});
-            setIcon(loadingIcon, 'loader-2');
-            loadingEl.createSpan({text: this.t.view.loading});
+        // 添加上级目录导航项
+        if (hasParent) {
+            this.createUpDirectoryItem(fileList);
         }
 
-        try {
-            if (!this.client) {
-                // 改为使用 Notice 提示
-                this.showNotice(this.t.view.connectionFailed, true);
-                return;
-            }
-
-            const files = await this.withTimeout(
-                this.client.getDirectoryContents(this.currentPath),
-                3000
-            );
-
-            if (loadingEl) {
-                loadingEl.remove();
-            }
-
-            if (this.currentPath !== this.rootPath) {
-                this.createUpDirectoryItem(fileList);
-            }
-
-            if (files.length === 0 && this.currentPath === this.rootPath) {
-                fileList.createEl('div', {
-                    cls: 'file-item empty',
-                    text: '📂 ' + this.t.view.emptyDir
-                });
-            } else {
-                this.renderFileList(fileList, files);
-            }
-
-        } catch {
-            if (loadingEl) {
-                loadingEl.remove();
-            }
-
-            if (retryCount < maxRetries) {
-                // 重试时不显示新的加载提示，保持当前状态
-                setTimeout(() => {
-                    void this.listDirectory(path, retryCount + 1);
-                }, retryDelay);
-            } else {
-                // 改为使用 Notice 提示，不在文件列表中显示错误
-                this.showNotice(this.t.view.listFailed, true);
-
-                // 显示空目录状态，而不是错误信息
-                fileList.createEl('div', {
-                    cls: 'file-item empty',
-                    text: '📂 ' + this.t.view.emptyDir
-                });
-            }
-        }
-    }
-
-    private renderFileList(fileList: HTMLElement, files: FileStat[]): void {
-        const sortedFiles = this.sortFiles(files);
-
-        for (const file of sortedFiles) {
-            const item = fileList.createEl('div', {cls: 'file-item'});
-            const iconSpan = item.createSpan({cls: 'file-icon'});
-            item.createSpan({cls: 'file-name', text: file.basename});
-
-            if (file.type === 'directory') {
-                iconSpan.textContent = '📁';
-                item.addClass('folder');
-                item.onclick = async () => {
-                    this.selectItem(item);
-                    await this.listDirectory(file.filename);
-                };
-            } else {
-                iconSpan.textContent = this.fileService.getFileIcon(file.basename);
-                item.addClass('file');
-                item.onclick = () => this.selectItem(item);
-                item.ondblclick = () => this.openFileWithWeb(file.filename);
-                item.oncontextmenu = (evt) => this.showFileContextMenu(evt, file);
-
-                item.setAttr('draggable', 'true');
-                item.ondragstart = (event) => this.handleFileDragStart(event, file);
-            }
-
-            item.addClass('is-clickable');
-        }
-    }
-
-    private openFileWithWeb(remotePath: string): void {
-        if (!this.currentServer) return;
-
-        try {
-            const finalUrl = this.getFileFullUrl(remotePath);
-
-            // const {username, password} = this.currentServer;
-            // const authUrl = finalUrl.replace(/^https?:\/\//, `http://${username}:${password}@`);
-
-            window.open(finalUrl, '_blank');
-            this.showNotice(this.t.view.opening, false);
-        } catch {
-            this.showNotice(this.t.view.openFailed, true);
-        }
-    }
-
-    private async downloadFile(file: FileStat): Promise<void> {
-        if (!this.client || !this.currentServer) {
-            this.showNotice(this.t.contextMenu.connectionError, true);
+        // 处理空目录情况
+        if (files.length === 0 && !hasParent) {
+            fileList.createEl('div', {
+                cls: 'file-item empty',
+                text: '📂 ' + this.t.view.emptyDir
+            });
             return;
         }
 
-        try {
-            await this.fileService.downloadFile(file, this.currentServer, this.client);
-            this.showNotice(`${this.t.contextMenu.downloadSuccess}: ${file.basename}`, false);
-        } catch {
-            this.showNotice(this.t.contextMenu.downloadFailed, true);
-        }
+        // 渲染排序后的文件列表
+        const sortedFiles = this.explorerService.sortFiles(files);
+        sortedFiles.forEach(file => this.renderFileItem(fileList, file));
     }
 
-    // ==================== 辅助方法 ====================
+    /**
+     * 渲染单个文件项
+     * @param fileList - 文件列表容器
+     * @param file - 文件信息
+     */
+    private renderFileItem(fileList: HTMLElement, file: FileStat): void {
+        const item = fileList.createEl('div', {cls: 'file-item'});
+        const iconSpan = item.createSpan({cls: 'file-icon'});
+        item.createSpan({cls: 'file-name', text: file.basename});
 
-    private async copyFileUrl(file: FileStat): Promise<void> {
-        try {
-            if (!this.currentServer) return;
-            const fileUrl = this.getFileFullUrl(file.filename);
-            await navigator.clipboard.writeText(fileUrl);
-            this.showNotice(this.t.contextMenu.urlCopied, false);
-        } catch {
-            this.showNotice(this.t.contextMenu.copyFailed, true);
-        }
-    }
-
-    private getRootPath(): string {
-        if (!this.currentServer) return '/';
-        const raw = this.currentServer.remoteDir.trim();
-        return raw === '' || raw === '/' ? '/' : '/' + raw.replace(/^\/+/, '').replace(/\/+$/, '');
-    }
-
-    private getFileFullUrl(remotePath: string): string {
-        if (!this.currentServer) return '';
-        const baseUrl = this.currentServer.url.replace(/\/$/, '');
-
-        // 确保路径以斜杠开头
-        let normalizedPath = remotePath;
-        if (!normalizedPath.startsWith('/')) {
-            normalizedPath = '/' + normalizedPath;
+        // 根据文件类型设置不同的交互逻辑
+        if (file.type === 'directory') {
+            this.setupDirectoryItem(item, iconSpan, file);
+        } else {
+            this.setupFileItem(item, iconSpan, file);
         }
 
-        // 使用 encodeURIComponent 但额外编码括号
-        const pathToEncode = normalizedPath.substring(1);
-        let encodedPath = '/' + encodeURIComponent(pathToEncode)
-            .replace(/%2F/g, '/')  // 恢复斜杠
-            .replace(/\(/g, '%28') // 编码左括号
-            .replace(/\)/g, '%29'); // 编码右括号
-
-        return `${baseUrl}${encodedPath}`;
+        item.addClass('is-clickable');
     }
 
-    private createBreadcrumb(path: string): void {
-        const breadcrumbContainer = this.containerEl.querySelector('.webdav-breadcrumb-container');
-        if (!breadcrumbContainer) return;
-
-        breadcrumbContainer.empty();
-        const breadcrumbEl = breadcrumbContainer.createEl('div', {cls: 'webdav-breadcrumb'});
-
-        const rootPath = this.rootPath;
-        let currentFullPath = path;
-
-        if (!currentFullPath.startsWith(rootPath)) {
-            currentFullPath = rootPath + (rootPath.endsWith('/') ? '' : '/') + path.replace(/^\//, '');
-        }
-
-        currentFullPath = currentFullPath.replace(/\/+/g, '/');
-        const relativePath = currentFullPath === rootPath ? '' : currentFullPath.substring(rootPath.length);
-
-        // 根目录
-        const rootItem = breadcrumbEl.createEl('span', {cls: 'breadcrumb-item breadcrumb-root'});
-        const rootLink = rootItem.createEl('a', {cls: 'breadcrumb-root-link'});
-        setIcon(rootLink, 'home');
-        rootLink.title = this.t.view.rootDirectory;
-        rootLink.onclick = async () => await this.listDirectory(rootPath);
-
-        // 路径部分
-        if (relativePath) {
-            const separator = breadcrumbEl.createEl('span', {cls: 'breadcrumb-separator'});
-            setIcon(separator, 'chevron-right');
-
-            const parts = relativePath.split('/').filter(p => p);
-            let currentPath = rootPath;
-
-            for (let i = 0; i < parts.length; i++) {
-                if (i > 0) {
-                    const sep = breadcrumbEl.createEl('span', {cls: 'breadcrumb-separator'});
-                    setIcon(sep, 'chevron-right');
-                }
-
-                const part = parts[i];
-                currentPath = currentPath === '/' ? `/${part}` : `${currentPath}/${part}`;
-
-                const item = breadcrumbEl.createEl('span', {cls: 'breadcrumb-item'});
-                const link = item.createEl('a', {text: part});
-
-                if (i === parts.length - 1) {
-                    link.addClass('breadcrumb-current');
-                } else {
-                    const targetPath = currentPath;
-                    link.onclick = async () => await this.listDirectory(targetPath);
-                }
-            }
-        }
-    }
-
-    private createUpDirectoryItem(fileList: HTMLElement): void {
-        const upItem = fileList.createEl('div', {
-            cls: 'file-item folder',
-            text: '📁 ..'
-        });
-
-        upItem.onclick = async () => {
-            let parentPath = this.currentPath;
-            if (parentPath.endsWith('/') && parentPath !== '/') {
-                parentPath = parentPath.slice(0, -1);
-            }
-
-            const lastSlashIndex = parentPath.lastIndexOf('/');
-            if (lastSlashIndex > 0) {
-                parentPath = parentPath.substring(0, lastSlashIndex);
-            } else {
-                parentPath = '/';
-            }
-
-            if (parentPath === '') parentPath = '/';
-            if (!parentPath.startsWith(this.rootPath)) parentPath = this.rootPath;
-
-            await this.listDirectory(parentPath);
+    /**
+     * 设置目录项的交互逻辑
+     * @param item - 目录项元素
+     * @param iconSpan - 图标元素
+     * @param file - 目录信息
+     */
+    private setupDirectoryItem(item: HTMLElement, iconSpan: HTMLElement, file: FileStat): void {
+        iconSpan.textContent = '📁';
+        item.addClass('folder');
+        item.onclick = async () => {
+            this.selectItem(item);
+            await this.explorerService.listDirectory(file.filename);
         };
     }
 
+    /**
+     * 设置文件项的交互逻辑
+     * @param item - 文件项元素
+     * @param iconSpan - 图标元素
+     * @param file - 文件信息
+     */
+    private setupFileItem(item: HTMLElement, iconSpan: HTMLElement, file: FileStat): void {
+        iconSpan.textContent = this.fileService.getFileIcon(file.basename);
+        item.addClass('file');
+
+        // 设置点击、双击和右键菜单事件
+        item.onclick = () => this.selectItem(item);
+        item.ondblclick = () => this.explorerService.openFileWithWeb(file.filename);
+        item.oncontextmenu = (evt) => this.showFileContextMenu(evt, file);
+
+        // 设置拖拽支持
+        item.setAttr('draggable', 'true');
+        item.ondragstart = (event) => this.handleFileDragStart(event, file);
+    }
+
+    /**
+     * 创建上级目录导航项
+     * @param fileList - 文件列表容器
+     */
+    private createUpDirectoryItem(fileList: HTMLElement): void {
+        const upItem = fileList.createEl('div', {cls: 'file-item folder', text: '📁 ..'});
+        upItem.onclick = async () => {
+            const parentPath = this.explorerService.getParentPath();
+            await this.explorerService.listDirectory(parentPath);
+        };
+    }
+
+    // ==================== 拖拽和菜单方法 ====================
+
+    /**
+     * 处理文件拖拽开始事件
+     * @param event - 拖拽事件
+     * @param file - 被拖拽的文件信息
+     */
     private handleFileDragStart(event: DragEvent, file: FileStat): void {
         const target = event.currentTarget as HTMLElement;
         this.selectItem(target);
 
-        // 处理文件名：将方括号替换为中文方括号
+        // 处理文件名中的特殊字符
         const processedFilename = file.filename
             .replace(/\[/g, '【')
-            .replace(/\]/g, '】');
+            .replace(/]/g, '】');
 
-        // 使用处理前的文件名生成URL
-        const originalUrl = this.getFileFullUrl(file.filename);
+        // 获取文件完整 URL 并应用前缀
+        const originalUrl = this.explorerService.getFileFullUrl(file.filename);
+        const finalUrl = this.explorerService.applyUrlPrefix(originalUrl);
 
-        let finalUrl = originalUrl;
-
-        // 如果有 URL 前缀，则替换掉服务器 URL
-        if (this.currentServer?.urlPrefix && this.currentServer.urlPrefix.trim() !== '') {
-            const serverUrl = this.currentServer.url.replace(/\/$/, '');
-            const urlPrefix = this.currentServer.urlPrefix.trim();
-            finalUrl = originalUrl.replace(serverUrl, urlPrefix);
-        }
-
-        // 设置拖拽数据 - 使用处理后的文件名
+        // 设置拖拽数据
         event.dataTransfer?.setData('text/plain', processedFilename);
         event.dataTransfer?.setData('text/uri-list', finalUrl);
 
+        this.setupDragEndCleanup();
+    }
+
+    /**
+     * 设置拖拽结束后的清理逻辑
+     */
+    private setupDragEndCleanup(): void {
         document.addEventListener('dragend', () => {
             setTimeout(() => {
+                // 在 Markdown 编辑器中插入换行
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView?.editor) {
                     const editor = markdownView.editor;
@@ -463,29 +366,38 @@ export class WebDAVExplorerView extends View {
         }, {once: true});
     }
 
-    // ==================== 菜单相关 ====================
-
+    /**
+     * 显示文件右键上下文菜单
+     * @param event - 鼠标事件
+     * @param file - 文件信息
+     */
     private showFileContextMenu(event: MouseEvent, file: FileStat): void {
         event.preventDefault();
         const menu = new Menu();
 
+        // 复制 URL 菜单项
         menu.addItem(item => {
             item.setTitle(this.t.contextMenu.copyUrl)
                 .setIcon('link')
-                .onClick(() => this.copyFileUrl(file));
+                .onClick(() => this.explorerService.copyFileUrl(file));
         });
 
+        // 下载文件菜单项
         menu.addItem(item => {
             item.setTitle(this.t.contextMenu.download)
                 .setIcon('download')
-                .onClick(() => this.downloadFile(file));
+                .onClick(() => this.explorerService.downloadFile(file));
         });
 
         menu.showAtMouseEvent(event);
     }
 
-// 在 WebDAVExplorerView 类中修改相关方法
+    // ==================== 服务器和排序菜单 ====================
 
+    /**
+     * 显示服务器选择菜单
+     * @param evt - 鼠标事件
+     */
     private showServerMenu(evt: MouseEvent): void {
         const servers = this.plugin.getServers();
         if (servers.length === 0) {
@@ -495,14 +407,13 @@ export class WebDAVExplorerView extends View {
 
         const menu = new Menu();
         servers.forEach(server => {
+            const isSelected = server.name === this.plugin.getCurrentServer()?.name;
             menu.addItem(item => {
-                const isSelected = server.name === this.currentServer?.name;
-                const icon = isSelected ? 'check' : '';
-                const space = '\u2009\u2009\u2009\u2009\u2009\u2009';
+                const space = '\u2009\u2009\u2009\u2009\u2009\u2009'; // 使用空格进行缩进
                 const title = isSelected ? server.name : `${space}${server.name}`;
 
                 item.setTitle(title)
-                    .setIcon(icon)
+                    .setIcon(isSelected ? 'check' : '')
                     .onClick(async () => await this.switchServer(server.name));
             });
         });
@@ -510,36 +421,39 @@ export class WebDAVExplorerView extends View {
         menu.showAtMouseEvent(evt);
     }
 
+    /**
+     * 切换服务器
+     * @param serverName - 服务器名称
+     */
     private async switchServer(serverName: string): Promise<void> {
-        this.currentServer = this.plugin.getServerByName(serverName);
-        if (this.currentServer) {
+        const server = this.plugin.getServerByName(serverName);
+        if (server) {
+            // 更新插件设置
             this.plugin.settings.currentServerName = serverName;
             await this.plugin.saveSettings();
 
-            this.client = null;
-            this.currentPath = '/';
-            this.rootPath = '/';
-            this.selectedItem = null;
+            // 更新服务并重新构建视图
+            this.explorerService.setCurrentServer(server);
+            this.rebuildView();
 
-            // 完全清除容器内容并重新构建
-            this.containerEl.empty();
-            this.containerEl.addClass('webdav-explorer-view');
-            this.buildHeader();
-
+            // 连接新服务器并显示结果
             const success = await this.connectAndList();
-
             if (success) {
                 this.showNotice(this.t.view.switchSuccess, false);
-            } else {
-                this.showNotice(this.t.view.connectionFailed, true);
             }
         }
     }
 
+    /**
+     * 显示排序选项菜单
+     * @param evt - 鼠标事件
+     */
     private showSortMenu(evt: MouseEvent): void {
         const menu = new Menu();
-        const space = '\u2009\u2009\u2009\u2009\u2009\u2009';
+        const space = '\u2009\u2009\u2009\u2009\u2009\u2009'; // 缩进空格
+        const currentSort = this.explorerService.getSortState();
 
+        // 排序选项配置
         const sortOptions: Array<{
             field: 'name' | 'type' | 'size' | 'date';
             order: 'asc' | 'desc';
@@ -555,16 +469,16 @@ export class WebDAVExplorerView extends View {
             {field: 'date', order: 'desc', title: this.t.view.sortByDateDesc}
         ];
 
+        // 添加排序菜单项
         sortOptions.forEach(({field, order, title}) => {
+            const isSelected = currentSort.field === field && currentSort.order === order;
             menu.addItem(item => {
-                const isSelected = this.sortField === field && this.sortOrder === order;
                 const displayTitle = isSelected ? title : `${space}${title}`;
 
                 item.setTitle(displayTitle)
                     .setIcon(isSelected ? 'check' : '')
                     .onClick(() => {
-                        this.sortField = field;
-                        this.sortOrder = order;
+                        this.explorerService.setSort(field, order);
                         this.updateSortIcon();
                         this.refreshFileList();
                     });
@@ -574,199 +488,150 @@ export class WebDAVExplorerView extends View {
         menu.showAtMouseEvent(evt);
     }
 
-    // ==================== 状态管理 ====================
+    // ==================== 状态管理方法 ====================
 
-
+    /**
+     * 选中文件项
+     * @param item - 要选中的文件项元素
+     */
     private selectItem(item: HTMLElement): void {
-        if (this.selectedItem) {
-            this.selectedItem.removeClass('selected');
-        }
+        this.selectedItem?.removeClass('selected');
         this.selectedItem = item;
         item.addClass('selected');
     }
 
+    /**
+     * 更新排序图标显示
+     */
     private updateSortIcon(): void {
         if (!this.sortIconEl) return;
         this.sortIconEl.empty();
 
-        const iconName = this.sortOrder === 'asc' ? 'arrow-up-narrow-wide' : 'arrow-down-wide-narrow';
+        const currentSort = this.explorerService.getSortState();
+        const iconName = currentSort.order === 'asc' ? 'arrow-up-narrow-wide' : 'arrow-down-wide-narrow';
         setIcon(this.sortIconEl, iconName);
 
+        // 更新按钮的无障碍标签
         if (this.sortButton) {
-            this.sortButton.setAttribute('aria-label', `${this.t.view.sort}: ${this.sortField}, ${this.sortOrder}`);
+            this.sortButton.setAttribute('aria-label',
+                `${this.t.view.sort}: ${currentSort.field}, ${currentSort.order}`);
         }
     }
 
-    private refreshFileList(): void {
-        if (this.currentPath) {
-            this.listDirectory(this.currentPath).catch(() => {
-                this.showNotice(this.t.view.refreshFailed, true);
-            });
-        }
+
+    /**
+     * 更新面包屑导航显示
+     */
+    private updateBreadcrumb(): void {
+        const breadcrumbContainer = this.containerEl.querySelector('.webdav-breadcrumb-container');
+        if (!breadcrumbContainer) return;
+
+        breadcrumbContainer.empty();
+        const breadcrumbEl = breadcrumbContainer.createEl('div', {cls: 'webdav-breadcrumb'});
+
+        const parts = this.explorerService.getBreadcrumbParts();
+
+        // 渲染面包屑的每个部分
+        parts.forEach((part, index) => {
+            // 添加分隔符（除第一项外）
+            if (index > 0) {
+                const separator = breadcrumbEl.createEl('span', {cls: 'breadcrumb-separator'});
+                setIcon(separator, 'chevron-right');
+            }
+
+            const item = breadcrumbEl.createEl('span', {cls: 'breadcrumb-item'});
+
+            if (part.name === 'root') {
+                // 根目录项
+                item.addClass('breadcrumb-root');
+                const rootLink = item.createEl('a', {cls: 'breadcrumb-root-link'});
+                setIcon(rootLink, 'home');
+                rootLink.title = this.t.view.rootDirectory;
+                rootLink.onclick = async () => await this.explorerService.listDirectory(part.path);
+            } else {
+                // 普通路径项
+                const link = item.createEl('a', {text: part.name});
+                if (part.isCurrent) {
+                    link.addClass('breadcrumb-current');
+                } else {
+                    link.onclick = async () => await this.explorerService.listDirectory(part.path);
+                }
+            }
+        });
     }
 
-    private async executeRefresh(): Promise<void> {
+    // ==================== 连接和刷新方法 ====================
+
+    /**
+     * 连接服务器并加载文件列表
+     * @returns 连接是否成功
+     */
+    private async connectAndList(): Promise<boolean> {
         try {
-            if (!this.currentServer) {
-                this.showNoServerConfigured();
-                return;
-            }
-
-            const success = await this.initializeClient();
+            const success = await this.explorerService.initializeClient();
             if (!success) {
-                this.showConnectionFailed();
                 this.showNotice(this.t.view.connectionFailed, true);
-                return;
+                return false;
             }
 
-            await this.listDirectory(this.currentPath);
-            this.showNotice(this.t.view.refreshSuccess, false);
+            await this.explorerService.listDirectory(this.explorerService.getCurrentPath());
+            return true;
         } catch {
             this.showNotice(this.t.view.connectionFailed, true);
-            this.showConnectionFailed();
-        }
-    }
-
-
-    // ==================== 工具方法 ====================
-
-    private async initializeClient(): Promise<boolean> {
-        if (!this.currentServer) return false;
-
-        const {url, username, password} = this.currentServer;
-        if (!url || !username || !password) return false;
-
-        try {
-            this.client = new WebDAVClient(this.currentServer);
-            const success = await this.client.initialize();
-
-            if (success) {
-                const testPath = this.getRootPath();
-                await this.client.getDirectoryContents(testPath);
-                return true;
-            }
-            return false;
-        } catch {
-            this.client = null;
             return false;
         }
     }
 
-    private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-        return new Promise((resolve, reject) => {
-            const timeoutId = setTimeout(() => {
-                reject(new Error(this.t.view.connectionFailed));
-            }, timeoutMs);
-
-            promise.then(
-                (result) => {
-                    clearTimeout(timeoutId);
-                    resolve(result);
-                },
-                (err) => {
-                    clearTimeout(timeoutId);
-                    reject(err instanceof Error ? err : new Error(String(err)));
-                }
-            );
+    /**
+     * 刷新文件列表显示
+     */
+    private refreshFileList(): void {
+        const currentPath = this.explorerService.getCurrentPath();
+        this.explorerService.listDirectory(currentPath).catch(() => {
+            this.showNotice(this.t.view.refreshFailed, true);
         });
     }
 
-    private sortFiles(files: FileStat[]): FileStat[] {
-        return files.sort((a, b) => {
-            if (a.type === 'directory' && b.type !== 'directory') {
-                return this.sortOrder === 'asc' ? -1 : 1;
-            } else if (a.type !== 'directory' && b.type === 'directory') {
-                return this.sortOrder === 'asc' ? 1 : -1;
-            }
-
-            let compareResult = 0;
-
-            if (this.sortField === 'name') {
-                const nameA = a.basename.toLowerCase();
-                const nameB = b.basename.toLowerCase();
-                compareResult = nameA.localeCompare(nameB);
-            } else if (this.sortField === 'type') {
-                const extA = this.getFileExtension(a.basename).toLowerCase();
-                const extB = this.getFileExtension(b.basename).toLowerCase();
-                compareResult = extA.localeCompare(extB);
-
-                if (compareResult === 0) {
-                    const nameA = a.basename.toLowerCase();
-                    const nameB = b.basename.toLowerCase();
-                    compareResult = nameA.localeCompare(nameB);
-                }
-            } else if (this.sortField === 'size') {
-                const sizeA = Number(a.size) || 0;
-                const sizeB = Number(b.size) || 0;
-                compareResult = sizeA - sizeB;
-            } else if (this.sortField === 'date') {
-                const dateA = this.parseLastModDate(a.lastmod);
-                const dateB = this.parseLastModDate(b.lastmod);
-                compareResult = dateB - dateA;
-            }
-
-            return this.sortOrder === 'desc' ? -compareResult : compareResult;
-        });
-    }
-
-    private getFileExtension(filename: string): string {
-        const parts = filename.split('.');
-        return parts.length > 1 ? parts.pop() || '' : '';
-    }
-
-    private parseLastModDate(lastmod: string): number {
-        if (!lastmod) return 0;
+    /**
+     * 执行刷新操作（防抖包装的实际实现）
+     */
+    private async executeRefresh(): Promise<void> {
         try {
-            const date = new Date(lastmod);
-            const timestamp = date.getTime();
-            return isNaN(timestamp) ? 0 : timestamp;
+            const currentServer = this.plugin.getCurrentServer();
+            // 在设置服务器之前保存当前路径
+        const currentPath = this.explorerService.getCurrentPath();
+
+        this.explorerService.setCurrentServer(currentServer);
+
+        if (!currentServer) {
+            this.showNotice(this.t.view.refreshFailed, true);
+            return;
+        }
+
+        // 重新初始化客户端连接
+        const success = await this.explorerService.initializeClient();
+        if (!success) {
+            this.showNotice(this.t.view.refreshFailed, true);
+            return;
+        }
+
+        // 使用保存的路径刷新文件列表，而不是重新获取
+        await this.explorerService.listDirectory(currentPath);
+            this.showNotice(this.t.view.refreshSuccess, false);
         } catch {
-            return 0;
+            this.showNotice(this.t.view.refreshFailed, true);
         }
     }
 
-    // ==================== UI 反馈 ====================
+    // ==================== UI 反馈方法 ====================
 
+    /**
+     * 显示通知消息
+     * @param message - 消息内容
+     * @param isError - 是否为错误消息
+     */
     private showNotice(message: string, isError: boolean = true): void {
         const prefix = isError ? '❌' : '✅';
         new Notice(`${prefix} ${message}`, isError ? 3000 : 1000);
-    }
-
-    private showConnectionFailed(): void {
-        // 直接重新构建界面
-        this.buildHeader();
-
-        // 创建空的文件列表容器
-        const listContainer = this.containerEl.createEl('div', {cls: 'file-list-container'});
-        const fileList = listContainer.createEl('div', {cls: 'file-list'});
-
-        // 显示空状态而不是错误信息
-        fileList.createEl('div', {
-            cls: 'file-item empty',
-            text: '📂 ' + this.t.view.emptyDir
-        });
-
-        if (this.currentPath) {
-            this.createBreadcrumb(this.currentPath);
-        }
-    }
-
-    private showNoServerConfigured(): void {
-        this.containerEl.empty();
-        this.containerEl.addClass('webdav-explorer-view');
-
-        // 构建完整的头部结构
-        this.buildHeader();
-
-        // 创建空的文件列表容器，保持界面结构完整
-        this.containerEl.createEl('div', {cls: 'file-list-container'});
-    }
-
-
-    private showError(message: string): void {
-        const container = this.containerEl;
-        const listContainer = container.createEl('div', {cls: 'file-list-container'});
-        const fileList = listContainer.createEl('div', {cls: 'file-list'});
-        fileList.createEl('div', {text: `⛔ ${message}`});
     }
 }
