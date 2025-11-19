@@ -3,24 +3,27 @@
     height: 100%;
     display: flex;
     flex-direction: column;
+
 }
 
 /* ==================== 头部区域 ==================== */
 .webdav-header {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--background-modifier-border);
-    margin-bottom: 10px;
     flex-shrink: 0;
+    padding: 8px 0;
 }
+.webdav-content {
+    flex: 1;
+        overflow-y: auto;      /* 垂直滚动 */
+    overflow-x: hidden;    /* 避免水平滚动（可选） */
+}
+
 
 .webdav-title-row {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 0 8px;
+    margin-bottom: 6px;
 }
 
 .webdav-actions-container {
@@ -143,34 +146,13 @@
 
 /* ==================== 文件列表区域 ==================== */
 .file-list-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    padding: 0 8px;
 }
 
 .file-list {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-/* 滚动条样式 */
-.file-list::-webkit-scrollbar {
-    width: 8px;
-}
-
-.file-list::-webkit-scrollbar-track {
-    background: var(--background-primary);
-}
-
-.file-list::-webkit-scrollbar-thumb {
-    background: var(--background-modifier-border);
-    border-radius: 4px;
-}
-
-.file-list::-webkit-scrollbar-thumb:hover {
-    background: var(--background-modifier-border-hover);
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 /* ==================== 文件项样式 ==================== */
@@ -242,6 +224,40 @@
     cursor: default;
 }
 
+/* ==================== 加载状态样式 ==================== */
+.file-item.loading {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    color: var(--text-muted);
+}
+
+.file-item.loading .file-icon {
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+.file-item.loading-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.webdav-button.loading-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 文件夹图标样式 */
+.file-item.folder .file-icon {
+    color: var(--icon-color);
+}
 
 /* ==================== 设置选项卡样式 ==================== */
 .webdav-dropdown,

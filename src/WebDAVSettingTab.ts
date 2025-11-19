@@ -28,7 +28,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
      * 翻译工具 getter
      */
     private get t() {
-        return this.plugin.i18n();
+        return this.plugin.t;
     }
 
     /**

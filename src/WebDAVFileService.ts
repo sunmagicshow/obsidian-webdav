@@ -61,23 +61,80 @@ export class WebDAVFileService {
     }
 
     /**
-     * 根据文件扩展名获取对应的图标表情符号
+     * 根据文件扩展名获取对应的 Obsidian 图标
      * @param filename - 文件名
-     * @returns 对应的图标表情符号
+     * @returns 对应的 Obsidian 图标名称
      */
     getFileIcon(filename: string): string {
         const ext = filename.split('.').pop()?.toLowerCase() || '';
 
-        // 文件扩展名到图标的映射
+        // 文件扩展名到 Obsidian 图标的映射
         const iconMap: Record<string, string> = {
-            'md': '📝', 'txt': '📄', 'pdf': '📕', 'doc': '📘', 'docx': '📘',
-            'xls': '📗', 'xlsx': '📗', 'ppt': '📙', 'pptx': '📙',
-            'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️', 'gif': '🖼️',
-            'mp4': '🎬', 'mkv': '🎬', 'avi': '🎬', 'mov': '🎬',
-            'mp3': '🎵', 'wav': '🎵', 'zip': '📦', 'rar': '📦', '7z': '📦', 'strm': '🔗'
+            // 文档类型
+            'md': 'file-text',
+            'txt': 'file-text',
+            'pdf': 'file-text',
+            'doc': 'file-text',
+            'docx': 'file-text',
+
+            // 表格类型
+            'xls': 'table',
+            'xlsx': 'table',
+            'csv': 'table',
+
+            // 演示文稿
+            'ppt': 'presentation',
+            'pptx': 'presentation',
+
+            // 图片类型
+            'jpg': 'image',
+            'jpeg': 'image',
+            'png': 'image',
+            'gif': 'image',
+            'svg': 'image',
+            'webp': 'image',
+            'bmp': 'image',
+
+            // 视频类型
+            'mp4': 'video',
+            'mkv': 'video',
+            'avi': 'video',
+            'mov': 'video',
+            'wmv': 'video',
+            'flv': 'video',
+
+            // 音频类型
+            'mp3': 'audio-file',
+            'wav': 'audio-file',
+            'flac': 'audio-file',
+            'aac': 'audio-file',
+            'ogg': 'audio-file',
+
+            // 压缩文件
+            'zip': 'archive',
+            'rar': 'archive',
+            '7z': 'archive',
+            'tar': 'archive',
+            'gz': 'archive',
+
+            // 代码文件
+            'js': 'file-code',
+            'ts': 'file-code',
+            'jsx': 'file-code',
+            'tsx': 'file-code',
+            'html': 'file-code',
+            'css': 'file-code',
+            'scss': 'file-code',
+            'json': 'file-code',
+            'xml': 'file-code',
+            'yml': 'file-code',
+            'yaml': 'file-code',
+
+            // 其他特殊类型
+            'strm': 'link'
         };
 
-        return iconMap[ext] || '📄'; // 默认返回文档图标
+        return iconMap[ext] || 'file'; // 默认返回文件图标
     }
 
     /**

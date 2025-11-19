@@ -23,6 +23,8 @@ export class WebDAVExplorerView extends View {
 
     /** 当前选中的文件项元素 */
     private selectedItem: HTMLElement | null = null;
+    /** 加载状态 */
+    private isLoading: boolean = false;
 
     // ==================== DOM 元素引用 ====================
 
@@ -66,7 +68,7 @@ export class WebDAVExplorerView extends View {
      * @returns 翻译函数
      */
     private get t() {
-        return this.plugin.i18n();
+        return this.plugin.t;
     }
 
     // ==================== 核心生命周期方法 ====================
@@ -230,10 +232,17 @@ export class WebDAVExplorerView extends View {
      */
     private handleFileListUpdate(files: FileStat[], hasParent: boolean): void {
         if (!this.contentEl) return;
-
+        // 清除加载状态
+        this.setLoadingState(false);
         this.contentEl.empty();
         const listContainer = this.contentEl.createEl('div', {cls: 'file-list-container'});
         const fileList = listContainer.createEl('div', {cls: 'file-list'});
+
+        // 如果正在加载，显示加载提示
+        if (this.isLoading) {
+            this.showLoadingState(fileList);
+            return;
+        }
 
         // 添加上级目录导航项
         if (hasParent) {
@@ -242,16 +251,27 @@ export class WebDAVExplorerView extends View {
 
         // 处理空目录情况
         if (files.length === 0 && !hasParent) {
-            fileList.createEl('div', {
-                cls: 'file-item empty',
-                text: '📂 ' + this.t.view.emptyDir
-            });
+            const emptyItem = fileList.createEl('div', {cls: 'file-item empty'});
+            const iconSpan = emptyItem.createSpan({cls: 'file-icon'});
+            setIcon(iconSpan, 'folder'); // 使用 Obsidian 的空文件夹图标
+            emptyItem.createSpan({cls: 'file-name', text: this.t.view.emptyDir});
             return;
         }
 
         // 渲染排序后的文件列表
         const sortedFiles = this.explorerService.sortFiles(files);
         sortedFiles.forEach(file => this.renderFileItem(fileList, file));
+    }
+
+    /**
+     * 显示加载状态
+     * @param fileList - 文件列表容器
+     */
+    private showLoadingState(fileList: HTMLElement): void {
+        const loadingItem = fileList.createEl('div', {cls: 'file-item loading'});
+        const iconSpan = loadingItem.createSpan({cls: 'file-icon'});
+        setIcon(iconSpan, 'loader'); // 使用 Obsidian 的旋转加载图标
+        loadingItem.createSpan({cls: 'file-name', text: this.t.view.loading || '加载中...'});
     }
 
     /**
@@ -281,12 +301,69 @@ export class WebDAVExplorerView extends View {
      * @param file - 目录信息
      */
     private setupDirectoryItem(item: HTMLElement, iconSpan: HTMLElement, file: FileStat): void {
-        iconSpan.textContent = '📁';
+        setIcon(iconSpan, 'folder'); // 使用 Obsidian 的文件夹图标
         item.addClass('folder');
         item.onclick = async () => {
             this.selectItem(item);
-            await this.explorerService.listDirectory(file.filename);
+            await this.navigateToDirectory(file.filename);
         };
+    }
+
+    /**
+     * 导航到目录（带加载状态）
+     * @param path - 目标路径
+     */
+    private async navigateToDirectory(path: string): Promise<void> {
+        // 立即显示加载状态
+        this.setLoadingState(true);
+
+        try {
+            await this.explorerService.listDirectory(path);
+        } catch {
+            this.showNotice(this.t.view.connectionFailed, true);
+            // 发生错误时也要清除加载状态
+            this.setLoadingState(false);
+        }
+    }
+
+    /**
+     * 设置加载状态
+     * @param loading - 是否正在加载
+     */
+    private setLoadingState(loading: boolean): void {
+        this.isLoading = loading;
+
+        // 立即更新UI显示加载状态
+        if (loading && this.contentEl) {
+            this.contentEl.empty();
+            const listContainer = this.contentEl.createEl('div', {cls: 'file-list-container'});
+            const fileList = listContainer.createEl('div', {cls: 'file-list'});
+            this.showLoadingState(fileList);
+        }
+
+        // 更新所有文件夹项的交互状态
+        const folderItems = this.contentEl?.querySelectorAll('.file-item.folder') || [];
+        folderItems.forEach(item => {
+            if (loading) {
+                item.addClass('loading-disabled');
+                item.setAttribute('disabled', 'true');
+            } else {
+                item.removeClass('loading-disabled');
+                item.removeAttribute('disabled');
+            }
+        });
+
+        // 更新刷新按钮状态
+        const refreshButton = this.containerEl.querySelector('.webdav-refresh-icon')?.parentElement?.parentElement;
+        if (refreshButton) {
+            if (loading) {
+                refreshButton.addClass('loading-disabled');
+                refreshButton.setAttribute('disabled', 'true');
+            } else {
+                refreshButton.removeClass('loading-disabled');
+                refreshButton.removeAttribute('disabled');
+            }
+        }
     }
 
     /**
@@ -296,7 +373,11 @@ export class WebDAVExplorerView extends View {
      * @param file - 文件信息
      */
     private setupFileItem(item: HTMLElement, iconSpan: HTMLElement, file: FileStat): void {
-        iconSpan.textContent = this.fileService.getFileIcon(file.basename);
+        const fileIcon = this.fileService.getFileIcon(file.basename);
+
+        // 直接使用 setIcon 设置 Obsidian 图标
+        setIcon(iconSpan, fileIcon);
+
         item.addClass('file');
 
         // 设置点击、双击和右键菜单事件
@@ -314,10 +395,13 @@ export class WebDAVExplorerView extends View {
      * @param fileList - 文件列表容器
      */
     private createUpDirectoryItem(fileList: HTMLElement): void {
-        const upItem = fileList.createEl('div', {cls: 'file-item folder', text: '📁 ..'});
+        const upItem = fileList.createEl('div', {cls: 'file-item folder'});
+        const iconSpan = upItem.createSpan({cls: 'file-icon'});
+        setIcon(iconSpan, 'folder-up');
+        upItem.createSpan({cls: 'file-name', text: '..'});
         upItem.onclick = async () => {
             const parentPath = this.explorerService.getParentPath();
-            await this.explorerService.listDirectory(parentPath);
+            await this.navigateToDirectory(parentPath);
         };
     }
 
@@ -518,7 +602,6 @@ export class WebDAVExplorerView extends View {
         }
     }
 
-
     /**
      * 更新面包屑导航显示
      */
@@ -599,24 +682,24 @@ export class WebDAVExplorerView extends View {
         try {
             const currentServer = this.plugin.getCurrentServer();
             // 在设置服务器之前保存当前路径
-        const currentPath = this.explorerService.getCurrentPath();
+            const currentPath = this.explorerService.getCurrentPath();
 
-        this.explorerService.setCurrentServer(currentServer);
+            this.explorerService.setCurrentServer(currentServer);
 
-        if (!currentServer) {
-            this.showNotice(this.t.view.refreshFailed, true);
-            return;
-        }
+            if (!currentServer) {
+                this.showNotice(this.t.view.refreshFailed, true);
+                return;
+            }
 
-        // 重新初始化客户端连接
-        const success = await this.explorerService.initializeClient();
-        if (!success) {
-            this.showNotice(this.t.view.refreshFailed, true);
-            return;
-        }
+            // 重新初始化客户端连接
+            const success = await this.explorerService.initializeClient();
+            if (!success) {
+                this.showNotice(this.t.view.refreshFailed, true);
+                return;
+            }
 
-        // 使用保存的路径刷新文件列表，而不是重新获取
-        await this.explorerService.listDirectory(currentPath);
+            // 使用保存的路径刷新文件列表，而不是重新获取
+            await this.explorerService.listDirectory(currentPath);
             this.showNotice(this.t.view.refreshSuccess, false);
         } catch {
             this.showNotice(this.t.view.refreshFailed, true);

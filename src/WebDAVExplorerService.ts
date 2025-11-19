@@ -24,7 +24,7 @@ export class WebDAVExplorerService {
     }
 
     private get t() {
-        return this.plugin.i18n();
+        return this.plugin.t;
     }
 
     // ==================== 服务器和连接管理 ====================
@@ -44,8 +44,7 @@ export class WebDAVExplorerService {
 
         try {
             this.client = new WebDAVClient(this.currentServer);
-            const success = await this.client.initialize();
-            return success;
+            return await this.client.initialize();
         } catch {
             this.client = null;
             return false;
@@ -54,43 +53,45 @@ export class WebDAVExplorerService {
 
     // ==================== 文件操作核心方法 ====================
 
-    public async listDirectory(path: string, retryCount: number = 0): Promise<void> {
-        if (!this.currentServer) {
-            this.onNotice(this.t.view.selectServer, true);
-            return;
-        }
+public async listDirectory(path: string, retryCount: number = 0): Promise<void> {
+    if (!this.currentServer) {
+        this.onNotice(this.t.view.selectServer, true);
+        return;
+    }
 
-        const maxRetries = 3;
-        const retryDelay = 1000;
+    const maxRetries = 3;
+    const retryDelay = 1000;
 
-        if (!this.client && !(await this.initializeClient())) {
+    if (!this.client && !(await this.initializeClient())) {
+        this.onNotice(this.t.view.connectionFailed, true);
+        return;
+    }
+
+    // 更新路径状态
+    this.updatePathState(path);
+    this.onPathUpdate(this.currentPath);
+
+    try {
+        const files = await this.withTimeout(
+            this.client!.getDirectoryContents(this.currentPath),
+            3000
+        );
+
+        const hasParent = this.currentPath !== this.rootPath;
+        this.onFileListUpdate(files, hasParent);
+
+    } catch (error) {
+        if (retryCount < maxRetries) {
+            setTimeout(() => {
+                void this.listDirectory(path, retryCount + 1);
+            }, retryDelay);
+        } else {
             this.onNotice(this.t.view.connectionFailed, true);
-            return;
-        }
-
-        // 更新路径状态
-        this.updatePathState(path);
-        this.onPathUpdate(this.currentPath);
-
-        try {
-            const files = await this.withTimeout(
-                this.client!.getDirectoryContents(this.currentPath),
-                3000
-            );
-
-            const hasParent = this.currentPath !== this.rootPath;
-            this.onFileListUpdate(files, hasParent);
-
-        } catch (error) {
-            if (retryCount < maxRetries) {
-                setTimeout(() => {
-                    void this.listDirectory(path, retryCount + 1);
-                }, retryDelay);
-            } else {
-                this.onNotice(this.t.view.connectionFailed, true);
-            }
+            // 即使出错也要触发列表更新以清除加载状态
+            this.onFileListUpdate([], false);
         }
     }
+}
 
     public async downloadFile(file: FileStat): Promise<void> {
         if (!this.client || !this.currentServer) {

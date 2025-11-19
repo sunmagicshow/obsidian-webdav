@@ -11,6 +11,10 @@ import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORE
 export default class WebDAVPlugin extends Plugin {
     settings: WebDAVSettings = DEFAULT_SETTINGS;
 
+    get t():LangPack {
+        return i18n();
+    }
+
     /**
      * 插件加载时的初始化操作
      * - 加载设置
@@ -32,7 +36,7 @@ export default class WebDAVPlugin extends Plugin {
         this.addSettingTab(new WebDAVSettingTab(this.app, this));
 
         // 添加 ribbon 图标，点击打开 WebDAV 浏览器
-        this.addRibbonIcon('cloud', this.i18n().displayName, () => {
+        this.addRibbonIcon('cloud', this.t.displayName, () => {
             void this.activateView();
         });
 
@@ -42,7 +46,10 @@ export default class WebDAVPlugin extends Plugin {
                 void this.activateView();
             }, 300);
         }
+
     }
+
+    // ==================== 服务器管理方法 ====================
 
     /**
      * 插件卸载时的清理操作
@@ -52,7 +59,6 @@ export default class WebDAVPlugin extends Plugin {
      */
     onunload() {
         const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER);
-        const t = this.i18n();
 
         // 卸载所有 WebDAV 视图
         for (const leaf of leaves) {
@@ -60,7 +66,7 @@ export default class WebDAVPlugin extends Plugin {
                 try {
                     leaf.view.onunload();
                 } catch {
-                    new Notice(t.settings.unloadError);
+                    new Notice(this.t.settings.unloadError);
                 }
             }
             leaf.detach();
@@ -69,8 +75,6 @@ export default class WebDAVPlugin extends Plugin {
         // 重置设置为默认值
         this.settings = DEFAULT_SETTINGS;
     }
-
-    // ==================== 服务器管理方法 ====================
 
     /**
      * 获取当前活动的服务器配置
@@ -111,6 +115,8 @@ export default class WebDAVPlugin extends Plugin {
         return this.settings.servers;
     }
 
+    // ==================== 视图管理方法 ====================
+
     /**
      * 根据服务器名称查找服务器配置
      * @param name - 服务器名称
@@ -120,7 +126,7 @@ export default class WebDAVPlugin extends Plugin {
         return this.settings.servers.find(s => s.name === name) || null;
     }
 
-    // ==================== 视图管理方法 ====================
+    // ==================== 设置管理方法 ====================
 
     /**
      * 激活并显示 WebDAV 浏览器视图
@@ -130,12 +136,11 @@ export default class WebDAVPlugin extends Plugin {
      */
     async activateView() {
         const {workspace} = this.app;
-        const t = this.i18n();
 
         // 检查是否存在默认服务器配置
         const defaultServer = this.getDefaultServer();
         if (!defaultServer) {
-            new Notice(t.settings.serverListEmpty);
+            new Notice(this.t.settings.serverListEmpty);
             return;
         }
 
@@ -176,8 +181,6 @@ export default class WebDAVPlugin extends Plugin {
         }
     }
 
-    // ==================== 设置管理方法 ====================
-
     /**
      * 加载插件设置
      * 合并默认设置和持久化存储的设置
@@ -186,6 +189,8 @@ export default class WebDAVPlugin extends Plugin {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
 
+    // ==================== 工具方法 ====================
+
     /**
      * 保存插件设置到持久化存储
      */
@@ -193,15 +198,11 @@ export default class WebDAVPlugin extends Plugin {
         await this.saveData(this.settings);
     }
 
-    // ==================== 工具方法 ====================
-
     /**
      * 获取国际化文本
      * @returns 当前语言包
      */
-    i18n(): LangPack {
-        return i18n();
-    }
+
 
     /**
      * 通知所有视图服务器配置已变更
