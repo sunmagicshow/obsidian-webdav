@@ -371,9 +371,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     // ==================== 事件处理方法 ====================
 
-    /**
-     * 处理默认服务器变更
-     */
+    // 处理默认服务器变更
     private async handleDefaultServerChange(serverName: string): Promise<void> {
         if (!serverName) return;
 
@@ -385,27 +383,22 @@ export class WebDAVSettingTab extends PluginSettingTab {
         new Notice(i18n.t.settings.defaultServerUpdated);
     }
 
-    /**
-     * 处理添加服务器
-     */
+    // 处理添加服务器
+
     private handleAddServer(): void {
         new ServerEditModal(this.app, this.plugin, null, async (server) => {
             await this.saveNewServer(server);
         }).open();
     }
 
-    /**
-     * 处理编辑服务器
-     */
+    // 处理编辑服务器
     private handleEditServer(server: WebDAVServer): void {
         new ServerEditModal(this.app, this.plugin, server, async (updatedServer) => {
             await this.updateServer(server, updatedServer);
         }).open();
     }
 
-    /**
-     * 处理删除服务器 - 直接删除，无需确认
-     */
+    // 处理删除服务器 - 直接删除，无需确认
     private async handleDeleteServer(server: WebDAVServer): Promise<void> {
         const {servers} = this.plugin.settings;
         const serverIndex = servers.findIndex(s => s === server);
@@ -423,9 +416,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         new Notice(i18n.t.settings.serverDeleted);
     }
 
-    /**
-     * 保存新服务器
-     */
+    // 保存新服务器
     private async saveNewServer(server: WebDAVServer): Promise<void> {
         this.plugin.settings.servers.push(server);
 
@@ -439,9 +430,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         new Notice(i18n.t.settings.serverAdded);
     }
 
-    /**
-     * 更新服务器
-     */
+    // 更新服务器
     private async updateServer(oldServer: WebDAVServer, updatedServer: WebDAVServer): Promise<void> {
         const serverIndex = this.plugin.settings.servers.findIndex(s => s === oldServer);
 
@@ -461,9 +450,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     // ==================== 工具方法 ====================
 
-    /**
-     * 处理删除服务器后的默认服务器逻辑
-     */
+    // 处理删除服务器后的默认服务器逻辑
     private handleDefaultServerAfterDeletion(deletedServer: WebDAVServer): void {
         const {servers} = this.plugin.settings;
 
@@ -485,9 +472,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
         }
     }
 
-    /**
-     * 保存设置并刷新界面
-     */
+    // 保存设置并刷新界面
     private async saveSettingsAndRefresh(): Promise<void> {
         await this.plugin.saveSettings();
         this.display();
