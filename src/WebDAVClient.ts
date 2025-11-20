@@ -87,10 +87,7 @@ export class WebDAVClient implements IWebDAVClient {
 
         try {
             // 以二进制格式获取文件内容
-            return await this.client.getFileContents(filePath, {
-                format: 'binary',    // 指定返回二进制格式
-                details: false       // 不返回详细信息，只返回文件内容
-            }) as ArrayBuffer;
+            return await this.client.getFileContents(filePath, {format: 'binary', details: false}) as ArrayBuffer;
         } catch {
             throw new Error('Failed to get file contents');
         }

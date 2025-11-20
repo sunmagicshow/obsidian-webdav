@@ -1,8 +1,16 @@
 import {FileStat} from 'webdav';
-import WebDAVPlugin from './main';
 import {WebDAVServer} from './types';
 import {WebDAVClient} from './WebDAVClient';
 import {WebDAVFileService} from './WebDAVFileService';
+import {i18n} from "./i18n";
+
+
+// 配置常量
+const CONFIG = {
+    maxRetries: 3,
+    retryDelay: 1000,
+    requestTimeout: 3000
+} as const;
 
 export class WebDAVExplorerService {
     private client: WebDAVClient | null = null;
@@ -15,7 +23,6 @@ export class WebDAVExplorerService {
     private sortOrder: 'asc' | 'desc' = 'asc';
 
     constructor(
-        private plugin: WebDAVPlugin,
         private fileService: WebDAVFileService,
         private onFileListUpdate: (files: FileStat[], hasParent: boolean) => void,
         private onPathUpdate: (path: string) => void,
@@ -23,9 +30,6 @@ export class WebDAVExplorerService {
     ) {
     }
 
-    private get t() {
-        return this.plugin.t;
-    }
 
     // ==================== 服务器和连接管理 ====================
 
@@ -53,57 +57,46 @@ export class WebDAVExplorerService {
 
     // ==================== 文件操作核心方法 ====================
 
-public async listDirectory(path: string, retryCount: number = 0): Promise<void> {
-    if (!this.currentServer) {
-        this.onNotice(this.t.view.selectServer, true);
-        return;
-    }
+    public async listDirectory(path: string, retryCount: number = 0): Promise<void> {
+        if (!this.currentServer) {
+            this.onNotice(i18n.t.view.selectServer, true);
+            return;
+        }
 
-    const maxRetries = 3;
-    const retryDelay = 1000;
+        if (!this.client && !(await this.initializeClient())) {
+            this.onNotice(i18n.t.view.connectionFailed, true);
+            return;
+        }
 
-    if (!this.client && !(await this.initializeClient())) {
-        this.onNotice(this.t.view.connectionFailed, true);
-        return;
-    }
+        // 更新路径状态
+        this.updatePathState(path);
+        this.onPathUpdate(this.currentPath);
 
-    // 更新路径状态
-    this.updatePathState(path);
-    this.onPathUpdate(this.currentPath);
+        try {
+            const files = await this.withTimeout(
+                this.client!.getDirectoryContents(this.currentPath),
+                CONFIG.requestTimeout
+            );
 
-    try {
-        const files = await this.withTimeout(
-            this.client!.getDirectoryContents(this.currentPath),
-            3000
-        );
+            const hasParent = this.currentPath !== this.rootPath;
+            this.onFileListUpdate(files, hasParent);
 
-        const hasParent = this.currentPath !== this.rootPath;
-        this.onFileListUpdate(files, hasParent);
-
-    } catch {
-        if (retryCount < maxRetries) {
-            setTimeout(() => {
-                void this.listDirectory(path, retryCount + 1);
-            }, retryDelay);
-        } else {
-            this.onNotice(this.t.view.connectionFailed, true);
-            // 即使出错也要触发列表更新以清除加载状态
-            this.onFileListUpdate([], false);
+        } catch {
+            await this.handleListDirectoryError(path, retryCount);  // 提取错误处理
         }
     }
-}
 
     public async downloadFile(file: FileStat): Promise<void> {
         if (!this.client || !this.currentServer) {
-            this.onNotice(this.t.contextMenu.connectionError, true);
+            this.onNotice(i18n.t.contextMenu.connectionError, true);
             return;
         }
 
         try {
             await this.fileService.downloadFile(file, this.currentServer, this.client);
-            this.onNotice(`${this.t.contextMenu.downloadSuccess}: ${file.basename}`, false);
+            this.onNotice(`${i18n.t.contextMenu.downloadSuccess}: ${file.basename}`, false);
         } catch {
-            this.onNotice(this.t.contextMenu.downloadFailed, true);
+            this.onNotice(i18n.t.contextMenu.downloadFailed, true);
         }
     }
 
@@ -112,9 +105,9 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
             if (!this.currentServer) return;
             const fileUrl = this.getFileFullUrl(file.filename);
             await navigator.clipboard.writeText(fileUrl);
-            this.onNotice(this.t.contextMenu.urlCopied, false);
+            this.onNotice(i18n.t.contextMenu.urlCopied, false);
         } catch {
-            this.onNotice(this.t.contextMenu.copyFailed, true);
+            this.onNotice(i18n.t.contextMenu.copyFailed, true);
         }
     }
 
@@ -124,13 +117,11 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
         try {
             const finalUrl = this.getFileFullUrl(remotePath);
             window.open(finalUrl, '_blank');
-            this.onNotice(this.t.view.opening, false);
+            this.onNotice(i18n.t.view.opening, false);
         } catch {
-            this.onNotice(this.t.view.openFailed, true);
+            this.onNotice(i18n.t.view.openFailed, true);
         }
     }
-
-    // ==================== 路径和导航方法 ====================
 
     public getCurrentPath(): string {
         return this.currentPath;
@@ -155,6 +146,8 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
 
         return parentPath;
     }
+
+    // ==================== 路径和导航方法 ====================
 
     public getBreadcrumbParts(): { name: string; path: string; isCurrent: boolean }[] {
         const parts = [];
@@ -189,8 +182,6 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
         return parts;
     }
 
-    // ==================== 排序方法 ====================
-
     public setSort(field: 'name' | 'type' | 'size' | 'date', order: 'asc' | 'desc'): void {
         this.sortField = field;
         this.sortOrder = order;
@@ -199,6 +190,8 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
     public getSortState(): { field: 'name' | 'type' | 'size' | 'date'; order: 'asc' | 'desc' } {
         return {field: this.sortField, order: this.sortOrder};
     }
+
+    // ==================== 排序方法 ====================
 
     public sortFiles(files: FileStat[]): FileStat[] {
         return files.sort((a, b) => {
@@ -230,8 +223,6 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
         });
     }
 
-    // ==================== 工具方法 ====================
-
     public getFileFullUrl(remotePath: string): string {
         if (!this.currentServer) return '';
         const baseUrl = this.currentServer.url.replace(/\/$/, '');
@@ -258,10 +249,26 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
         return originalUrl.replace(serverUrl, urlPrefix);
     }
 
+    // ==================== 工具方法 ====================
+
     public getRootPath(): string {
         if (!this.currentServer) return '/';
         const raw = this.currentServer.remoteDir.trim();
         return raw === '' || raw === '/' ? '/' : '/' + raw.replace(/^\/+/, '').replace(/\/+$/, '');
+    }
+
+    private async handleListDirectoryError(path: string, retryCount: number): Promise<void> {
+        if (retryCount < CONFIG.maxRetries) {  // 使用常量
+            await this.delay(CONFIG.retryDelay);  // 使用常量
+            await this.listDirectory(path, retryCount + 1);
+        } else {
+            this.onNotice(i18n.t.view.connectionFailed, true);
+            this.onFileListUpdate([], false);
+        }
+    }
+
+    private delay(ms: number): Promise<void> {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     // ==================== 私有方法 ====================
@@ -286,15 +293,13 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
 
     private getFileExtension(filename: string): string {
         const parts = filename.split('.');
-        return parts.length > 1 ? parts.pop() || '' : '';
+        return parts.length > 1 ? parts.pop() ! : '';
     }
 
     private parseLastModDate(lastmod: string): number {
         if (!lastmod) return 0;
         try {
-            const date = new Date(lastmod);
-            const timestamp = date.getTime();
-            return isNaN(timestamp) ? 0 : timestamp;
+            return new Date(lastmod).getTime() || 0;
         } catch {
             return 0;
         }
@@ -303,7 +308,7 @@ public async listDirectory(path: string, retryCount: number = 0): Promise<void> 
     private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
-                reject(new Error(this.t.view.connectionFailed));
+                reject(new Error(i18n.t.view.connectionFailed));
             }, timeoutMs);
 
             promise.then(

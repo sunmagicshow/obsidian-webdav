@@ -1,7 +1,7 @@
 import {Notice, Plugin} from 'obsidian';
 import {WebDAVSettingTab} from './WebDAVSettingTab';
 import {WebDAVExplorerView} from './WebDAVExplorerView';
-import {i18n, type LangPack} from './i18n';
+import {i18n} from './i18n';
 import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 
 /**
@@ -10,10 +10,6 @@ import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORE
  */
 export default class WebDAVPlugin extends Plugin {
     settings: WebDAVSettings = DEFAULT_SETTINGS;
-
-    get t():LangPack {
-        return i18n();
-    }
 
     /**
      * 插件加载时的初始化操作
@@ -36,7 +32,7 @@ export default class WebDAVPlugin extends Plugin {
         this.addSettingTab(new WebDAVSettingTab(this.app, this));
 
         // 添加 ribbon 图标，点击打开 WebDAV 浏览器
-        this.addRibbonIcon('cloud', this.t.displayName, () => {
+        this.addRibbonIcon('cloud', i18n.t.displayName, () => {
             void this.activateView();
         });
 
@@ -66,7 +62,7 @@ export default class WebDAVPlugin extends Plugin {
                 try {
                     leaf.view.onunload();
                 } catch {
-                    new Notice(this.t.settings.unloadError);
+                    new Notice(i18n.t.settings.unloadError);
                 }
             }
             leaf.detach();
@@ -140,20 +136,20 @@ export default class WebDAVPlugin extends Plugin {
         // 检查是否存在默认服务器配置
         const defaultServer = this.getDefaultServer();
         if (!defaultServer) {
-            new Notice(this.t.settings.serverListEmpty);
+            new Notice(i18n.t.settings.serverListEmpty);
             return;
         }
 
         // 设置当前服务器为默认服务器并保存设置
         this.settings.currentServerName = defaultServer.name;
-       await this.saveData(this.settings);
+        await this.saveSettings();
 
         // 查找已存在的 WebDAV 视图
         let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
 
         if (leaf) {
             // 显示已存在的视图并强制刷新
-             await workspace.revealLeaf(leaf);
+            await workspace.revealLeaf(leaf);
             if (leaf.view instanceof WebDAVExplorerView) {
                 leaf.view.onunload();
                 await leaf.view.onOpen();
@@ -187,6 +183,10 @@ export default class WebDAVPlugin extends Plugin {
      */
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    }
+
+    async saveSettings() {
+        await this.saveData(this.settings);
     }
 
     /**

@@ -1,6 +1,5 @@
 import {getLanguage} from 'obsidian';
 
-
 interface SettingItem {
     name: string;
     desc: string;
@@ -61,7 +60,7 @@ export interface LangPack {
     };
 }
 
-// 英文语言包 - 移除重复和冗余的翻译
+// 英文语言包
 const en: LangPack = {
     displayName: 'WebDAV Explorer',
     settings: {
@@ -87,7 +86,7 @@ const en: LangPack = {
         duplicateName: 'Server name already exists',
         nameRequired: 'Server name cannot be empty',
         unloadError: 'Failed to unload WebDAV explorer',
-        noServersAvailable   : 'No servers available',
+        noServersAvailable: 'No servers available',
     },
     view: {
         connectionFailed: 'Connection failed',
@@ -123,7 +122,7 @@ const en: LangPack = {
     }
 };
 
-// 中文语言包 - 同样精简
+// 中文语言包
 const zh: LangPack = {
     displayName: 'WebDAV 资源管理器',
     settings: {
@@ -189,7 +188,7 @@ const zh: LangPack = {
 type Locale = 'zh' | 'en';
 
 // 语言包映射
-const locales: Record<Locale, LangPack> = {en, zh};
+const locales: Record<Locale, LangPack> = {zh, en};
 
 // 获取系统语言
 function getSystemLocale(): Locale {
@@ -197,7 +196,16 @@ function getSystemLocale(): Locale {
     return language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
 }
 
-// 获取当前语言包
-export function i18n(): LangPack {
-    return locales[getSystemLocale()];
+export class I18nService {
+    // 当前语言包实例
+    public t: LangPack;
+
+    constructor() {
+        // 初始化时根据系统语言设置
+        this.t = locales[getSystemLocale()];
+    }
+
 }
+
+// 创建单例实例
+export const i18n = new I18nService();
