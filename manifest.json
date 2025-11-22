@@ -1,0 +1,10 @@
+{
+  "id": "webdav-explorer",
+  "name": "WebDAV Explorer",
+  "version": "1.0.0",
+  "description": "WebDAV Explorer.",
+  "author": "蓝星晓夜",
+  "minAppVersion": "1.7.4",
+  "isDesktopOnly": true,
+  "fundingUrl": ""
+}
