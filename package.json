@@ -4,13 +4,18 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "build": "node build.mjs || exit 0"
+    "build": "node build.mjs || exit 0",
+    "lint": "eslint . --config eslint.config.mjs",
+    "lint:fix": "eslint . --config eslint.config.mjs --fix"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@types/node": "^22.18.10",
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
+    "@typescript-eslint/parser": "^8.46.3",
     "esbuild": "^0.25.11",
     "eslint": "^9.39.1",
     "eslint-plugin-obsidianmd": "^0.1.9",
@@ -23,9 +28,8 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "axios": "^1.7.9",
+    "axios": "^1.13.2",
     "i18next": "^24.2.2",
     "webdav": "^5.8.0"
-  },
-  "description": ""
+  }
 }

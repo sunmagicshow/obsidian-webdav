@@ -1,4 +1,3 @@
-import { App, PluginSettingTab } from 'obsidian';
 import { FileStat } from 'webdav';
 
 // === 常量定义 ===
@@ -35,13 +34,3 @@ export interface IWebDAVClient {
     getDirectoryContents(path: string): Promise<FileStat[]>;
     getFileContents(filePath: string): Promise<ArrayBuffer>;
 }
-
-// 扩展App接口以支持插件设置功能
-export interface AppWithSettings extends App {
-    setting: {
-        open: () => void;
-        openTabById: (id: string) => void;
-        activeTab: PluginSettingTab | null;
-    };
-}
-

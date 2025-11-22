@@ -353,17 +353,6 @@
     min-width: 200px;
 }
 
-.setting-item-name {
-    color: var(--text-normal);
-    font-weight: 500;
-    font-size: 1.1em;
-}
-
-.setting-item-description {
-    color: var(--text-muted);
-    font-size: 0.9em;
-}
-
 .webdav-server-form .setting-item {
     border-top: none;
     padding: 8px 0;

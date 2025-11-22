@@ -31,15 +31,15 @@ export class WebDAVClient implements IWebDAVClient {
 
         try {
             // 构建 Basic Authentication 头部
-            const authHeader = 'Basic ' + btoa(`${username}:${password}`);
+            // const authHeader = 'Basic ' + btoa(`${username}:${password}`);
 
             // 创建 WebDAV 客户端实例
             this.client = createClient(url, {
                 username,
                 password,
-                headers: {
-                    'Authorization': authHeader
-                }
+                // headers: {
+                //     'Authorization': authHeader
+                // }
             });
 
             // 测试连接：尝试获取根目录内容

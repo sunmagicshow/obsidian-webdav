@@ -6,6 +6,7 @@ import {WebDAVFileService} from './WebDAVFileService';
 import {WebDAVExplorerService} from './WebDAVExplorerService';
 import {i18n} from "./i18n";
 
+/* global document, setTimeout */
 /**
  * WebDAV 文件浏览器视图
  * 负责渲染 WebDAV 服务器的文件列表，处理用户交互和文件操作
@@ -335,7 +336,7 @@ export class WebDAVExplorerView extends View {
     }
 
     private setupDragEndCleanup(): void {
-        document.addEventListener('dragend', () => {
+        this.registerDomEvent(document, 'dragend', () => {
             setTimeout(() => {
                 const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
                 if (markdownView?.editor) {
@@ -347,6 +348,7 @@ export class WebDAVExplorerView extends View {
             }, 10);
         }, {once: true});
     }
+
 
     private showFileContextMenu(event: MouseEvent, file: FileStat): void {
         event.preventDefault();

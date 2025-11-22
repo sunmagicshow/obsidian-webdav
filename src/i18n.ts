@@ -36,7 +36,6 @@ export interface LangPack {
         urlRequired: string;
         duplicateName: string;
         deleteNotice: string;
-        confirmDelete: string;
         serverListEmpty: string;
         unloadError: string;
 
@@ -45,6 +44,9 @@ export interface LangPack {
         cancel: string;
         edit: string;
         delete: string;
+        confirmDeleteMessage: string;
+        confirm: string;
+        deleteFailed: string;
 
         // 状态提示
         serverAdded: string;
@@ -56,6 +58,9 @@ export interface LangPack {
         // 标识文本
         default: string;
         current: string;
+        confirmDelete: string;
+
+
     };
     view: {
         connectionFailed: string;
@@ -90,99 +95,6 @@ export interface LangPack {
         connectionError: string;
     };
 }
-
-// 英文语言包
-const en: LangPack = {
-    displayName: 'WebDAV Explorer',
-    settings: {
-        // 服务器管理
-        addServer: 'Add WebDAV Server',
-        editServer: 'Edit WebDAV Server',
-        deleteServer: 'Delete Server',
-        serverName: 'Server Name',
-        defaultServer: 'Default Server',
-        defaultServerDesc: 'Default server when opening explorer',
-        currentServer: 'Current Server',
-        setAsDefault: 'Set as Default Server',
-        setAsDefaultDesc: 'Set this server as the default server',
-        noServersAvailable: 'No servers available',
-        clickAddToCreate: 'Click the "Add Server" button below to create your first server configuration',
-
-        // 服务器配置
-        url: 'Server URL',
-        urlDesc: 'Full WebDAV server URL',
-        username: 'Username',
-        password: 'Password',
-        remoteDir: 'Remote Directory',
-        remoteDirDesc: 'Remote directory path on the server',
-        urlPrefix: {
-            name: 'URL Prefix',
-            desc: 'Replace URL prefix for drag-and-drop links'
-        },
-        downloadPath: {
-            name: 'Download Path',
-            desc: 'Empty or "/" for root directory',
-        },
-
-        // 表单验证和提示
-        nameRequired: 'Server name cannot be empty',
-        urlRequired: 'Server URL cannot be empty',
-        duplicateName: 'Server name already exists',
-        deleteNotice: 'Cannot delete the last server',
-        confirmDelete: 'Are you sure you want to delete this server?',
-        serverListEmpty: 'Server list is empty',
-        unloadError: 'Failed to unload WebDAV explorer',
-
-        // 操作按钮
-        save: 'Save',
-        cancel: 'Cancel',
-        edit: 'Edit',
-        delete: 'Delete',
-
-        // 状态提示
-        serverAdded: 'Server added successfully',
-        serverUpdated: 'Server updated successfully',
-        serverDeleted: 'Server deleted successfully',
-        defaultServerUpdated: 'Default server updated',
-        saveFailed: 'Failed to save server configuration',
-
-        // 标识文本
-        default: 'Default',
-        current: 'Current'
-    },
-    view: {
-        connectionFailed: 'Connection failed',
-        listFailed: 'Failed to list directory',
-        refreshFailed: 'Refresh failed',
-        refreshSuccess: 'Refresh success',
-        emptyDir: 'Empty directory',
-        opening: 'Opening file...',
-        openFailed: 'Failed to open file',
-        rootDirectory: 'Home',
-        loading: 'Loading...',
-        refresh: 'Refresh',
-        sort: 'Sort',
-        sortByNameAsc: 'Name (A-Z)',
-        sortByNameDesc: 'Name (Z-A)',
-        sortByTypeAsc: 'Type (A-Z)',
-        sortByTypeDesc: 'Type (Z-A)',
-        sortBySizeAsc: 'Size (Small-Large)',
-        sortBySizeDesc: 'Size (Large-Small)',
-        sortByDateAsc: 'Date (Old-New)',
-        sortByDateDesc: 'Date (New-Old)',
-        selectServer: 'Select server',
-        switchSuccess: 'Switch success',
-    },
-    contextMenu: {
-        copyUrl: 'Copy URL',
-        download: 'Download',
-        urlCopied: 'URL copied',
-        copyFailed: 'Copy failed',
-        downloadSuccess: 'Download success',
-        downloadFailed: 'Download failed',
-        connectionError: 'Connection error',
-    }
-};
 
 // 中文语言包
 const zh: LangPack = {
@@ -231,6 +143,8 @@ const zh: LangPack = {
         cancel: '取消',
         edit: '编辑',
         delete: '删除',
+        confirmDeleteMessage: "确定要删除服务器 '{name}' 吗？此操作无法撤销。",
+        confirm: "确认",
 
         // 状态提示
         serverAdded: '服务器添加成功',
@@ -238,10 +152,12 @@ const zh: LangPack = {
         serverDeleted: '服务器删除成功',
         defaultServerUpdated: '默认服务器已更新',
         saveFailed: '保存服务器配置失败',
+        deleteFailed: '删除服务器失败',
 
         // 标识文本
         default: '默认',
-        current: '当前'
+        current: '当前',
+
     },
     view: {
         connectionFailed: '连接失败',
@@ -277,6 +193,105 @@ const zh: LangPack = {
     }
 };
 
+// 英文语言包
+const en: LangPack = {
+    displayName: 'WebDAV Explorer',
+    settings: {
+        // 服务器管理
+        addServer: 'Add WebDAV Server',
+        editServer: 'Edit WebDAV Server',
+        deleteServer: 'Delete Server',
+        serverName: 'Server Name',
+        defaultServer: 'Default Server',
+        defaultServerDesc: 'Default server when opening explorer',
+        currentServer: 'Current Server',
+        setAsDefault: 'Set as Default Server',
+        setAsDefaultDesc: 'Set this server as the default server',
+        noServersAvailable: 'No servers available',
+        clickAddToCreate: 'Click the "Add Server" button below to create your first server configuration',
+
+        // 服务器配置
+        url: 'Server URL',
+        urlDesc: 'Full WebDAV server URL',
+        username: 'Username',
+        password: 'Password',
+        remoteDir: 'Remote Directory',
+        remoteDirDesc: 'Remote directory path on the server',
+        urlPrefix: {
+            name: 'URL Prefix',
+            desc: 'Replace URL prefix for drag-and-drop links'
+        },
+        downloadPath: {
+            name: 'Download Path',
+            desc: 'Empty or "/" for root directory',
+        },
+
+        // 表单验证和提示
+        nameRequired: 'Server name cannot be empty',
+        urlRequired: 'Server URL cannot be empty',
+        duplicateName: 'Server name already exists',
+        deleteNotice: 'Cannot delete the last server',
+        confirmDelete: 'Are you sure you want to delete this server?',
+        serverListEmpty: 'Server list is empty',
+        unloadError: 'Failed to unload WebDAV explorer',
+
+        // 操作按钮
+        save: 'Save',
+        cancel: 'Cancel',
+        edit: 'Edit',
+        delete: 'Delete',
+        confirmDeleteMessage: "Are you sure you want to delete server '{name}'? This action cannot be undone.",
+        confirm: "Confirm",
+        deleteFailed: 'Failed to delete server',
+
+        // 状态提示
+        serverAdded: 'Server added successfully',
+        serverUpdated: 'Server updated successfully',
+        serverDeleted: 'Server deleted successfully',
+        defaultServerUpdated: 'Default server updated',
+        saveFailed: 'Failed to save server configuration',
+
+        // 标识文本
+        default: 'Default',
+        current: 'Current',
+
+
+    },
+    view: {
+        connectionFailed: 'Connection failed',
+        listFailed: 'Failed to list directory',
+        refreshFailed: 'Refresh failed',
+        refreshSuccess: 'Refresh success',
+        emptyDir: 'Empty directory',
+        opening: 'Opening file...',
+        openFailed: 'Failed to open file',
+        rootDirectory: 'Home',
+        loading: 'Loading...',
+        refresh: 'Refresh',
+        sort: 'Sort',
+        sortByNameAsc: 'Name (A-Z)',
+        sortByNameDesc: 'Name (Z-A)',
+        sortByTypeAsc: 'Type (A-Z)',
+        sortByTypeDesc: 'Type (Z-A)',
+        sortBySizeAsc: 'Size (Small-Large)',
+        sortBySizeDesc: 'Size (Large-Small)',
+        sortByDateAsc: 'Date (Old-New)',
+        sortByDateDesc: 'Date (New-Old)',
+        selectServer: 'Select server',
+        switchSuccess: 'Switch success',
+    },
+    contextMenu: {
+        copyUrl: 'Copy URL',
+        download: 'Download',
+        urlCopied: 'URL copied',
+        copyFailed: 'Copy failed',
+        downloadSuccess: 'Download success',
+        downloadFailed: 'Download failed',
+        connectionError: 'Connection error',
+    }
+};
+
+
 // 定义语言类型
 type Locale = 'zh' | 'en';
 
@@ -285,7 +300,7 @@ const locales: Record<Locale, LangPack> = {zh, en};
 
 // 获取系统语言
 function getSystemLocale(): Locale {
-    const language = getLanguage() || navigator.language || 'en';
+    const language = getLanguage();
     return language.toLowerCase().startsWith('zh') ? 'zh' : 'en';
 }
 
@@ -297,30 +312,6 @@ export class I18nService {
         // 初始化时根据系统语言设置
         this.t = locales[getSystemLocale()];
     }
-    //
-    // /**
-    //  * 切换语言
-    //  */
-    // public setLocale(locale: Locale): void {
-    //     this.t = locales[locale] || locales.en;
-    // }
-    //
-    // /**
-    //  * 获取当前语言
-    //  */
-    // public getCurrentLocale(): Locale {
-    //     return this.t === zh ? 'zh' : 'en';
-    // }
-    //
-    // /**
-    //  * 获取所有支持的语言
-    //  */
-    // public getSupportedLocales(): Array<{code: Locale; name: string}> {
-    //     return [
-    //         {code: 'en', name: 'English'},
-    //         {code: 'zh', name: '中文'}
-    //     ];
-    // }
 }
 
 // 创建单例实例

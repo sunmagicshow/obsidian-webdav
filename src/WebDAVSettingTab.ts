@@ -3,19 +3,27 @@ import WebDAVPlugin from './main';
 import {WebDAVServer} from './types';
 import {i18n} from "./i18n";
 
+interface FormFieldConfig {
+    name: string;
+    desc?: string;
+    placeholder: string;
+    type?: 'text' | 'password';
+    required?: boolean;
+    getValue: (server: WebDAVServer) => string;
+    setValue: (server: WebDAVServer, value: string) => void;
+}
+
 //添加/编辑服务器的模态框
 class ServerEditModal extends Modal {
     private readonly plugin: WebDAVPlugin;
     private readonly server: WebDAVServer | null;
     private readonly onSave: (server: WebDAVServer) => void;
-    private readonly isEditing: boolean;
 
     constructor(app: App, plugin: WebDAVPlugin, server: WebDAVServer | null, onSave: (server: WebDAVServer) => void) {
         super(app);
         this.plugin = plugin;
         this.server = server;
         this.onSave = onSave;
-        this.isEditing = !!server;
     }
 
     onOpen(): void {
@@ -24,17 +32,9 @@ class ServerEditModal extends Modal {
 
     private render(): void {
         const {contentEl} = this;
-        contentEl.empty();
-        contentEl.empty();
-        contentEl.empty();
-        contentEl.empty();
-        contentEl.empty();
-        contentEl.empty();
-        contentEl.empty();
-
 
         contentEl.createEl('h2', {
-            text: this.isEditing ? i18n.t.settings.editServer : i18n.t.settings.addServer
+            text: this.server !== null ? i18n.t.settings.editServer : i18n.t.settings.addServer
         });
 
         const serverData: WebDAVServer = this.server || this.createNewServer();
@@ -43,90 +43,83 @@ class ServerEditModal extends Modal {
         this.renderActionButtons(contentEl, serverData);
     }
 
+    private getFormFieldConfigs(): FormFieldConfig[] {
+        return [
+            {
+                name: i18n.t.settings.serverName,
+                desc: i18n.t.settings.nameRequired,
+                placeholder: i18n.t.settings.serverName,
+                required: true,
+                getValue: (server) => server.name,
+                setValue: (server, value) => server.name = value.trim()
+            },
+            {
+                name: i18n.t.settings.url,
+                desc: i18n.t.settings.urlDesc || 'WebDAV服务器地址',
+                placeholder: 'http://192.168.0.1:8080/dav',
+                required: true,
+                getValue: (server) => server.url,
+                setValue: (server, value) => server.url = value.trim()
+            },
+            {
+                name: i18n.t.settings.username,
+                placeholder: i18n.t.settings.username,
+                getValue: (server) => server.username || '',
+                setValue: (server, value) => server.username = value.trim()
+            },
+            {
+                name: i18n.t.settings.password,
+                placeholder: i18n.t.settings.password,
+                type: 'password',
+                getValue: (server) => server.password || '',
+                setValue: (server, value) => server.password = value
+            },
+            {
+                name: i18n.t.settings.remoteDir,
+                desc: i18n.t.settings.remoteDirDesc || '服务器上的远程目录路径',
+                placeholder: '/',
+                getValue: (server) => server.remoteDir || '',
+                setValue: (server, value) => server.remoteDir = value.trim()
+            },
+            {
+                name: i18n.t.settings.urlPrefix.name,
+                desc: i18n.t.settings.urlPrefix.desc,
+                placeholder: 'http://192.168.0.1:8000/dav',
+                getValue: (server) => server.urlPrefix || '',
+                setValue: (server, value) => server.urlPrefix = value.trim()
+            },
+            {
+                name: i18n.t.settings.downloadPath.name,
+                desc: i18n.t.settings.downloadPath.desc,
+                placeholder: '/',
+                getValue: (server) => server.downloadPath || '',
+                setValue: (server, value) => server.downloadPath = value.trim()
+            }
+        ];
+    }
+
     private renderServerForm(container: HTMLElement, server: WebDAVServer): void {
-        const formContainer = container.createEl('div', {cls: 'webdav-server-form'});
+        const formContainer = container.createDiv({cls: 'webdav-server-form'});
 
-        // 服务器名称
-        new Setting(formContainer)
-            .setName(i18n.t.settings.serverName)
-            .setDesc(i18n.t.settings.nameRequired)
-            .addText(text => {
-                text
-                    .setPlaceholder(i18n.t.settings.serverName)
-                    .setValue(server.name)
-                    .onChange(value => server.name = value.trim());
-            });
+        this.getFormFieldConfigs().forEach(config => {
+            new Setting(formContainer)
+                .setName(config.name)
+                .setDesc(config.desc || '')
+                .addText(text => {
+                    text
+                        .setPlaceholder(config.placeholder)
+                        .setValue(config.getValue(server))
+                        .onChange(value => config.setValue(server, value));
 
-        // 服务器URL
-        new Setting(formContainer)
-            .setName(i18n.t.settings.url)
-            .setDesc(i18n.t.settings.urlDesc || 'WebDAV服务器地址')
-            .addText(text => {
-                text
-                    .setPlaceholder('http://192.168.0.1:8080/dav')
-                    .setValue(server.url)
-                    .onChange(value => server.url = value.trim());
-            });
-
-        // 用户名
-        new Setting(formContainer)
-            .setName(i18n.t.settings.username)
-            .addText(text => {
-                text
-                    .setPlaceholder(i18n.t.settings.username)
-                    .setValue(server.username)
-                    .onChange(value => server.username = value.trim());
-            });
-
-        // 密码
-        new Setting(formContainer)
-            .setName(i18n.t.settings.password)
-            .addText(text => {
-                text
-                    .setPlaceholder(i18n.t.settings.password)
-                    .setValue(server.password)
-                    .inputEl.type = 'password';
-                text.onChange(value => server.password = value);
-            });
-
-        // 远程目录
-        new Setting(formContainer)
-            .setName(i18n.t.settings.remoteDir)
-            .setDesc(i18n.t.settings.remoteDirDesc || '服务器上的远程目录路径')
-            .addText(text => {
-                text
-                    .setPlaceholder('/')
-                    .setValue(server.remoteDir)
-                    .onChange(value => server.remoteDir = value.trim());
-            });
-
-        // URL前缀（可选）
-        new Setting(formContainer)
-            .setName(i18n.t.settings.urlPrefix.name)
-            .setDesc(i18n.t.settings.urlPrefix.desc)
-            .addText(text => {
-                text
-                    .setPlaceholder('http://192.168.0.1:8000/dav')
-                    .setValue(server.urlPrefix)
-                    .onChange(value => server.urlPrefix = value.trim());
-            });
-
-        // 下载路径（可选）
-        new Setting(formContainer)
-            .setName(i18n.t.settings.downloadPath.name)
-            .setDesc(i18n.t.settings.downloadPath.desc)
-            .addText(text => {
-                text
-                    .setPlaceholder('/')
-                    .setValue(server.downloadPath || '')
-                    .onChange(value => server.downloadPath = value.trim());
-            });
-
-
+                    if (config.type === 'password') {
+                        text.inputEl.type = 'password';
+                    }
+                });
+        });
     }
 
     private renderActionButtons(container: HTMLElement, server: WebDAVServer): void {
-        const buttonContainer = container.createEl('div', {cls: 'modal-button-container'});
+        const buttonContainer = container.createDiv({cls: 'modal-button-container'});
 
         // 保存按钮
         new ButtonComponent(buttonContainer)
@@ -144,13 +137,9 @@ class ServerEditModal extends Modal {
         if (!this.validateServer(server)) {
             return;
         }
+        this.onSave(server);
+        this.close();
 
-        try {
-            this.onSave(server);
-            this.close();
-        } catch  {
-            new Notice(i18n.t.settings.saveFailed);
-        }
     }
 
     private validateServer(server: WebDAVServer): boolean {
@@ -166,7 +155,7 @@ class ServerEditModal extends Modal {
 
         // 检查名称重复（编辑时排除自身）
         const isDuplicate = this.plugin.settings.servers.some(s =>
-            s.name === server.name && (!this.isEditing || s !== this.server)
+            s.name === server.name && (this.server === null || s !== this.server)
         );
 
         if (isDuplicate) {
@@ -260,7 +249,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     // 渲染服务器列表区域
     private renderServersListSection(): void {
-        const serversContainer = this.containerEl.createEl('div', {cls: 'webdav-servers-container'});
+        const serversContainer = this.containerEl.createDiv({cls: 'webdav-servers-container'});
         const {servers} = this.plugin.settings;
 
         if (servers.length === 0) {
@@ -278,7 +267,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     // 渲染无服务器时的提示信息
     private renderNoServersMessage(container: HTMLElement): void {
-        const messageEl = container.createEl('div', {cls: 'webdav-no-servers'});
+        const messageEl = container.createDiv({cls: 'webdav-no-servers'});
         messageEl.createEl('p', {text: i18n.t.settings.noServersAvailable});
         messageEl.createEl('p', {
             text: i18n.t.settings.clickAddToCreate,
@@ -296,7 +285,7 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     // 渲染单个服务器概览卡片
     private renderServerCard(server: WebDAVServer, container: HTMLElement): void {
-        const cardEl = container.createEl('div', {cls: 'webdav-server-card'});
+        const cardEl = container.createDiv({cls: 'webdav-server-card'});
 
         // 服务器头部信息和操作按钮在同一行
         this.renderServerHeader(server, cardEl);
@@ -307,21 +296,28 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     // 渲染服务器头部信息
     private renderServerHeader(server: WebDAVServer, container: HTMLElement): void {
-        const headerEl = container.createEl('div', {cls: 'webdav-server-header'});
+        const headerEl = container.createDiv({cls: 'webdav-server-header'});
 
-        const leftSection = headerEl.createEl('div', {cls: 'webdav-header-left'});
-        const nameEl = leftSection.createEl('div', {cls: 'webdav-server-name'});
-        nameEl.createEl('h3', {text: server.name});
+        // 使用 Setting 组件创建标题
+        const nameSetting = new Setting(headerEl)
+            .setName(server.name)
+            .setHeading();
+
+        // 移除控件容器，因为我们只需要标题
+        nameSetting.controlEl.remove();
+
+        // 添加自定义样式和徽章
+        nameSetting.nameEl.addClass('webdav-server-name');
 
         if (server.isDefault) {
-            nameEl.createEl('span', {
+            nameSetting.nameEl.createEl('span', {
                 text: i18n.t.settings.default,
                 cls: 'webdav-default-badge'
             });
         }
 
         // 操作按钮放在右侧
-        const actionsEl = headerEl.createEl('div', {cls: 'webdav-server-actions'});
+        const actionsEl = headerEl.createDiv({cls: 'webdav-server-actions'});
 
         // 编辑按钮
         new ButtonComponent(actionsEl)
@@ -335,38 +331,37 @@ export class WebDAVSettingTab extends PluginSettingTab {
             .setIcon('trash-2')
             .setTooltip(i18n.t.settings.delete)
             .setWarning()
-            .onClick(() => this.handleDeleteServer(server));
+            .onClick(() => {
+                this.handleDeleteServer(server).catch(() => {
+                    new Notice(i18n.t.settings.deleteFailed);
+                });
+            });
     }
 
     // 渲染服务器详细信息
     private renderServerDetails(server: WebDAVServer, container: HTMLElement): void {
-        const detailsEl = container.createEl('div', {cls: 'webdav-server-details'});
+        const detailsContainer = container.createDiv({
+            cls: 'webdav-details-container'
+        });
 
-        // 创建详情项容器
-        const detailsContainer = detailsEl.createEl('div', {cls: 'webdav-details-container'});
+        const fields = [
+            {label: i18n.t.settings.url, value: server.url},
+            {label: i18n.t.settings.username, value: server.username || '-'},
+            {label: i18n.t.settings.urlPrefix.name, value: server.urlPrefix || '-'},
+            {label: i18n.t.settings.remoteDir, value: server.remoteDir || '-'}
+        ];
 
-        // 服务器URL
-        this.renderDetailItem(detailsContainer, i18n.t.settings.url, server.url);
-
-        // 用户名
-        this.renderDetailItem(detailsContainer, i18n.t.settings.username, server.username || '-');
-
-        // URL前缀
-        this.renderDetailItem(detailsContainer, i18n.t.settings.urlPrefix.name, server.urlPrefix || '-');
-
-        // 远程目录
-        this.renderDetailItem(detailsContainer, i18n.t.settings.remoteDir, server.remoteDir || '-');
-    }
-
-    // 渲染详情项
-    private renderDetailItem(container: HTMLElement, label: string, value: string): void {
-        const itemEl = container.createEl('div', {cls: 'webdav-detail-item'});
-
-        const labelEl = itemEl.createEl('div', {cls: 'webdav-detail-label'});
-        labelEl.setText(label);
-
-        const valueEl = itemEl.createEl('div', {cls: 'webdav-detail-value'});
-        valueEl.setText(value);
+        fields.forEach((field,) => {
+            const item = detailsContainer.createDiv({cls: 'webdav-detail-item'});
+            item.createEl('div', {
+                text: field.label,
+                cls: 'webdav-detail-label'
+            });
+            item.createEl('div', {
+                text: field.value,
+                cls: 'webdav-detail-value'
+            });
+        });
     }
 
     // ==================== 事件处理方法 ====================
@@ -386,15 +381,19 @@ export class WebDAVSettingTab extends PluginSettingTab {
     // 处理添加服务器
 
     private handleAddServer(): void {
-        new ServerEditModal(this.app, this.plugin, null, async (server) => {
-            await this.saveNewServer(server);
+        new ServerEditModal(this.app, this.plugin, null, (server) => {
+            this.saveNewServer(server).catch(() => {
+                new Notice(i18n.t.settings.saveFailed);
+            });
         }).open();
     }
 
     // 处理编辑服务器
     private handleEditServer(server: WebDAVServer): void {
-        new ServerEditModal(this.app, this.plugin, server, async (updatedServer) => {
-            await this.updateServer(server, updatedServer);
+        new ServerEditModal(this.app, this.plugin, server, (updatedServer) => {
+            this.updateServer(server, updatedServer).catch(() => {
+                new Notice(i18n.t.settings.saveFailed);
+            });
         }).open();
     }
 
@@ -405,6 +404,10 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
         if (serverIndex === -1) return;
 
+        // 创建轻量确认对话框
+        const confirmed = await this.showDeleteConfirmation(server.name);
+        if (!confirmed) return;
+
         // 从服务器列表中移除
         servers.splice(serverIndex, 1);
 
@@ -414,6 +417,38 @@ export class WebDAVSettingTab extends PluginSettingTab {
         await this.saveSettingsAndRefresh();
         this.plugin.notifyServerChanged();
         new Notice(i18n.t.settings.serverDeleted);
+    }
+
+    private showDeleteConfirmation(serverName: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            const modal = new Modal(this.app);
+
+            modal.titleEl.setText(i18n.t.settings.confirmDelete);
+            modal.contentEl.createEl('p', {
+                text: i18n.t.settings.confirmDeleteMessage.replace('{name}', serverName)
+            });
+
+            const buttonContainer = modal.contentEl.createDiv({cls: 'modal-button-container'});
+
+            // 确认删除按钮
+            new ButtonComponent(buttonContainer)
+                .setButtonText(i18n.t.settings.confirm)
+                .setWarning()
+                .onClick(() => {
+                    modal.close();
+                    resolve(true);
+                });
+
+            // 取消按钮
+            new ButtonComponent(buttonContainer)
+                .setButtonText(i18n.t.settings.cancel)
+                .onClick(() => {
+                    modal.close();
+                    resolve(false);
+                });
+
+            modal.open();
+        });
     }
 
     // 保存新服务器

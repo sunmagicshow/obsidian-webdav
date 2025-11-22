@@ -18,11 +18,13 @@ await build({
   legalComments: 'none',
 });
 
-// 复制 CSS 文件（同步方式）
+// 复制文件
 try {
-  const cssContent = readFileSync('src/styles.css', 'utf8');
-  writeFileSync('dist/styles.css', cssContent);
-  console.log('✅ styles.css 复制成功');
-} catch (error) {
-  console.error('❌ styles.css 复制失败:', error);
+    const Content = readFileSync('src/styles.css', 'utf8');
+    const Content2 = readFileSync('manifest.json', 'utf8');
+    writeFileSync('dist/styles.css', Content);
+    writeFileSync('dist/manifest.json', Content2);
+    console.log('✅ 文件复制成功');
+} catch {
+    console.log('❌ 文件复制失败:');
 }

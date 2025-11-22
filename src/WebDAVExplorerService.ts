@@ -3,7 +3,7 @@ import {WebDAVServer} from './types';
 import {WebDAVClient} from './WebDAVClient';
 import {WebDAVFileService} from './WebDAVFileService';
 import {i18n} from "./i18n";
-
+/* global  setTimeout,navigator,window,clearTimeout */
 
 // 配置常量
 const CONFIG = {
