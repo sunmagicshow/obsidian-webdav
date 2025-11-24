@@ -1,0 +1,74 @@
+# ==================== #
+# 依赖和构建输出        #
+# ==================== #
+node_modules/          # 依赖目录 - 必须忽略！
+dist/                  # 构建输出
+build/                 # 构建目录
+*.tsbuildinfo          # TypeScript 构建信息
+*.map                  # Source maps
+
+# ==================== #
+# 日志文件              #
+# ==================== #
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ==================== #
+# 运行时数据            #
+# ==================== #
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ==================== #
+# 测试覆盖率            #
+# ==================== #
+coverage/
+.nyc_output/
+*.lcov
+
+# ==================== #
+# 环境变量              #
+# ==================== #
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==================== #
+# IDE 配置              #
+# ==================== #
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==================== #
+# 系统文件              #
+# ==================== #
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==================== #
+# Obsidian 特定         #
+# ==================== #
+.obsidian/            # Obsidian 配置和缓存
+*.mobile.*            # 移动端特定文件
+
+# ==================== #
+# 插件开发特定          #
+# ==================== #
+manifest.json.bak     # 清单文件备份
+versions.json         # 版本信息（如果自动生成）
