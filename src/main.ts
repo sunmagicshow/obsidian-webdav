@@ -37,14 +37,6 @@ export default class WebDAVPlugin extends Plugin {
         this.addRibbonIcon('cloud', i18n.t.displayName, () => {
             void this.activateView();
         });
-
-        // 如果配置了默认服务器，延迟 300ms 后自动打开视图
-        if (this.getDefaultServer()) {
-            setTimeout(() => {
-                void this.activateView();
-            }, 300);
-        }
-
     }
 
     // ==================== 服务器管理方法 ====================
@@ -67,11 +59,7 @@ export default class WebDAVPlugin extends Plugin {
                     new Notice(i18n.t.settings.unloadError);
                 }
             }
-            leaf.detach();
         }
-
-        // 重置设置为默认值
-        this.settings = DEFAULT_SETTINGS;
     }
 
     /**

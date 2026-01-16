@@ -197,6 +197,7 @@ class ServerEditModal extends Modal {
 
 // 重构后的 WebDAV 插件设置面板 使用模态框进行服务器编辑，主页面显示服务器列表概览
 export class WebDAVSettingTab extends PluginSettingTab {
+    icon = 'cloud';
     private readonly plugin: WebDAVPlugin;
 
     constructor(app: App, plugin: WebDAVPlugin) {
