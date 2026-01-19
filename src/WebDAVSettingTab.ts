@@ -133,7 +133,7 @@ class ServerEditModal extends Modal {
             .onClick(() => this.close());
     }
 
-    private async handleSave(server: WebDAVServer): Promise<void> {
+    private handleSave(server: WebDAVServer): void {
         if (!this.validateServer(server)) {
             return;
         }

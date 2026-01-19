@@ -6,7 +6,6 @@ import {WebDAVFileService} from './WebDAVFileService';
 import {WebDAVExplorerService} from './WebDAVExplorerService';
 import {i18n} from "./i18n";
 
-/* global document, setTimeout */
 /**
  * WebDAV 文件浏览器视图
  * 负责渲染 WebDAV 服务器的文件列表，处理用户交互和文件操作

@@ -19,6 +19,7 @@
     "esbuild": "^0.25.11",
     "eslint": "^9.39.1",
     "eslint-plugin-obsidianmd": "^0.1.9",
+    "globals": "^17.0.0",
     "obsidian": "^1.10.0",
     "ts-loader": "^9.5.2",
     "ts-node": "^1.7.1",

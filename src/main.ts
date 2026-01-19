@@ -4,7 +4,6 @@ import {WebDAVExplorerView} from './WebDAVExplorerView';
 import {i18n} from './i18n';
 import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
 
-/* global setTimeout */
 /**
  * WebDAV 插件主类
  * 负责插件生命周期管理、服务器配置和视图控制

@@ -2,7 +2,7 @@ import {App, Notice} from 'obsidian';
 import {FileStat} from 'webdav';
 import {WebDAVServer} from './types';
 import {WebDAVClient} from './WebDAVClient';
-/*global clearTimeout, window, Blob,document,URL*/
+
 /**
  * WebDAV 文件服务类
  * 负责处理 WebDAV 服务器的文件下载、路径标准化等操作
