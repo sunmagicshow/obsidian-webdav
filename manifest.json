@@ -1,0 +1,9 @@
+{
+  "id": "webdav-explorer",
+  "name": "WebDAV Explorer",
+  "version": "1.0.0",
+  "description": "WebDAV Explorer: Connect to webdav server, preview files directly in web view, and generate links through simple drag-and-drop.",
+  "author": "蓝星晓夜",
+  "minAppVersion": "1.8.7",
+  "isDesktopOnly": true
+}

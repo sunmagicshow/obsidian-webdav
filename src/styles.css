@@ -1,0 +1,367 @@
+/* ==================== WebDAV 插件主样式 ==================== */
+
+/* 基础布局和容器 */
+.webdav-explorer-view {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.webdav-header {
+    flex-shrink: 0;
+    padding: 8px 0;
+}
+
+.webdav-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 头部区域 */
+.webdav-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+    margin-bottom: 6px;
+}
+
+.webdav-actions-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 按钮样式 */
+.webdav-button {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--text-muted);
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    user-select: none;
+}
+
+.webdav-button:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+    border-color: var(--background-modifier-border-hover);
+}
+
+.webdav-button-content {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 图标样式 */
+.webdav-server-icon,.webdav-refresh-icon,.webdav-sort-icon,.webdav-file-icon {
+    display: flex;
+    align-items: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.webdav-file-item.folder .webdav-file-icon {
+    color: var(--icon-color);
+}
+
+/* 面包屑导航 */
+.webdav-breadcrumb-container {
+    padding: 0 8px;
+}
+
+.webdav-breadcrumb {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.webdav-breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+
+.webdav-breadcrumb-item a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-muted);
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.webdav-breadcrumb-item a:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.webdav-breadcrumb-current {
+    color: var(--text-normal) !important;
+    font-weight: 500;
+    cursor: default !important;
+    background: none !important;
+}
+
+.webdav-breadcrumb-separator {
+    display: flex;
+    align-items: center;
+    color: var(--text-faint);
+    user-select: none;
+}
+
+.webdav-breadcrumb-separator svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.5;
+}
+
+.webdav-breadcrumb-root {
+    display: flex;
+    align-items: center;
+}
+
+.webdav-breadcrumb-root-link {
+    display: flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.webdav-breadcrumb-root-link:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+/* 文件列表区域 */
+.webdav-file-list-container {
+    padding: 0 8px;
+}
+
+.webdav-file-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* 文件项样式 */
+.webdav-file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin: 2px 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    min-height: 28px;
+    box-sizing: border-box;
+}
+
+.webdav-file-item.folder .webdav-file-name {
+    color: var(--text-normal);
+    font-weight: 500;
+}
+
+.webdav-file-item.file .webdav-file-name {
+    color: var(--text-muted);
+}
+
+.webdav-file-item.selected {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-radius: 4px;
+}
+
+.webdav-file-item.selected .webdav-file-name {
+    color: var(--text-on-accent) !important;
+}
+
+.webdav-file-item:hover:not(.selected) {
+    background-color: var(--background-modifier-hover);
+    border-radius: 4px;
+}
+
+.webdav-file-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 特殊状态文件项 */
+.webdav-file-item.webdav-empty {
+    color: var(--text-muted);
+    font-style: italic;
+    cursor: default;
+}
+
+/* 加载状态样式 */
+.webdav-file-item.loading,
+.webdav-button.loading-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.webdav-file-item.loading {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    color: var(--text-muted);
+}
+
+.webdav-file-item.loading .webdav-file-icon {
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes webdav-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+/* OK */
+/* 设置页面样式 */
+.webdav-servers-container {
+    margin: var(--size-4-4) 0;
+}
+
+.webdav-server-card {
+    border: var(--border-width) solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+    padding: var(--size-4-3);
+    margin: var(--size-4-2) 0;
+    background: var(--background-secondary);
+}
+
+.webdav-server-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.webdav-header-left {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.webdav-server-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.webdav-server-name h3 {
+    margin: 0;
+    color: var(--text-normal);
+    font-size: 1.1em;
+    font-weight: 500;
+}
+
+
+
+
+
+.webdav-default-badge {
+    font-size: 0.7em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    background: var(--color-green);
+    color: white;
+}
+
+.webdav-server-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* 服务器详情布局 */
+.webdav-server-details {
+    margin: 8px 0;
+}
+
+.webdav-details-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.webdav-detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 详情项宽度分配比例 */
+.webdav-detail-item:nth-child(1),
+.webdav-detail-item:nth-child(3) {
+    flex: 3;
+    min-width: 180px;
+    max-width: 300px;
+}
+
+.webdav-detail-item:nth-child(2),
+.webdav-detail-item:nth-child(4) {
+    flex: 2;
+    min-width: 120px;
+    max-width: 200px;
+}
+
+.webdav-detail-label {
+    font-weight: bold;
+    color: var(--text-muted);
+    font-size: 0.95em;
+    white-space: nowrap;
+}
+
+.webdav-detail-value {
+    color: var(--text-normal);
+    font-size: 1em;
+    word-break: break-all;
+    min-height: 1.2em;
+}
+
+
+
+/* OK */
+.webdav-no-servers {
+    text-align: center;
+}
+/* OK */
+.webdav-server-divider {
+    margin: var(--size-4-3) 0;
+    border-color: var(--background-modifier-border);
+}
+/* OK */
+.webdav-modal-button-container {
+    display: flex;
+    gap: var(--size-4-2);
+    justify-content: flex-end;
+    margin-top: var(--size-4-4);
+}
