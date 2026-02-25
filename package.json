@@ -1,0 +1,36 @@
+{
+  "name": "webdav-explorer",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.mjs || exit 0",
+    "lint": "eslint . --config eslint.config.mjs",
+    "lint:fix": "eslint . --config eslint.config.mjs --fix"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^22.18.10",
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
+    "@typescript-eslint/parser": "^8.46.3",
+    "esbuild": "^0.25.11",
+    "eslint": "^9.39.1",
+    "eslint-plugin-obsidianmd": "^0.1.9",
+    "globals": "^17.0.0",
+    "obsidian": "^1.10.0",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^1.7.1",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "i18next": "^24.2.2",
+    "webdav": "^5.8.0"
+  }
+}
