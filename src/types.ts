@@ -9,7 +9,8 @@ export interface WebDAVServer {
     name: string;
     url: string;
     username: string;
-    password: string;
+    // password: string;
+    secretId: string;
     remoteDir: string;
     urlPrefix: string;
     isDefault?: boolean;

@@ -26,6 +26,11 @@ export interface LangPack {
         urlDesc?: string;
         username: string;
         password: string;
+        secretId: string;
+        secretIdDesc: string;
+        selectSecretId: string;
+        openKeychain: string;
+        keyChainFailed: string;
         remoteDir: string;
         remoteDirDesc?: string;
         urlPrefix: SettingItem;
@@ -43,6 +48,9 @@ export interface LangPack {
         save: string;
         cancel: string;
         edit: string;
+        copy: string;
+        copySuffix:string;
+        serverCopied: string;
         delete: string;
         confirmDeleteMessage: string;
         confirm: string;
@@ -118,6 +126,11 @@ const zh: LangPack = {
         urlDesc: '完整的 WebDAV 服务器地址',
         username: '用户名',
         password: '密码',
+        secretId: '钥匙串ID',
+        secretIdDesc: '从钥匙串设置中选择',
+        selectSecretId: '请选择密钥ID',
+        openKeychain: '打开钥匙串设置',
+        keyChainFailed: '钥匙串设置打开失败',
         remoteDir: '远程目录',
         remoteDirDesc: '服务器上的远程目录路径',
         urlPrefix: {
@@ -142,6 +155,9 @@ const zh: LangPack = {
         save: '保存',
         cancel: '取消',
         edit: '编辑',
+        copy: '复制',
+        copySuffix:'_副本',
+        serverCopied: '已复制服务器: {name}',
         delete: '删除',
         confirmDeleteMessage: "确定要删除服务器 '{name}' 吗？此操作无法撤销。",
         confirm: "确认",
@@ -215,6 +231,11 @@ const en: LangPack = {
         urlDesc: 'Full WebDAV server url',
         username: 'Username',
         password: 'Password',
+        secretId: 'Keychain ID',
+        secretIdDesc: 'Select from keychain',
+        selectSecretId: 'Please select keychain ID',
+        openKeychain: 'Open Keychain Setting',
+        keyChainFailed: 'Keychain Setting failed to open',
         remoteDir: 'Remote directory',
         remoteDirDesc: 'Remote directory path on the server',
         urlPrefix: {
@@ -239,6 +260,9 @@ const en: LangPack = {
         save: 'Save',
         cancel: 'Cancel',
         edit: 'Edit',
+        copy: 'Copy',
+        copySuffix:'_copy',
+        serverCopied: 'Server copied: {name}',
         delete: 'Delete',
         confirmDeleteMessage: "Are you sure you want to delete server '{name}'? This action cannot be undone.",
         confirm: "Confirm",

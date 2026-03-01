@@ -1,5 +1,6 @@
 import {createClient, FileStat} from 'webdav';
 import {IWebDAVClient, WebDAVServer} from './types';
+import {SecretStorage} from 'obsidian';
 
 /**
  * WebDAV 客户端实现类
@@ -8,12 +9,15 @@ import {IWebDAVClient, WebDAVServer} from './types';
 export class WebDAVClient implements IWebDAVClient {
     /** WebDAV 客户端实例 */
     private client: ReturnType<typeof createClient> | null = null;
+    private secretStorage: SecretStorage;
 
     /**
      * 构造函数
      * @param server - WebDAV 服务器配置信息
+     * @param secretStorage
      */
-    constructor(private server: WebDAVServer) {
+    constructor(private server: WebDAVServer, secretStorage: SecretStorage) {
+        this.secretStorage = secretStorage;
     }
 
     /**
@@ -22,13 +26,16 @@ export class WebDAVClient implements IWebDAVClient {
      * @returns 连接成功返回 true，失败返回 false
      */
     async initialize(): Promise<boolean> {
-        const {url, username, password} = this.server;
+        const {url, username, secretId} = this.server;
 
         // 验证必要的配置参数
-        if (!url || !username || !password) {
+        if (!url || !username || !secretId) {
             return false;
         }
-
+        const password = this.secretStorage.getSecret(secretId);
+        if (!password) {
+            return false;
+        }
         try {
             // 创建 WebDAV 客户端实例
             this.client = createClient(url, {

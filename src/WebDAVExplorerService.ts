@@ -3,6 +3,7 @@ import {WebDAVServer} from './types';
 import {WebDAVClient} from './WebDAVClient';
 import {WebDAVFileService} from './WebDAVFileService';
 import {i18n} from "./i18n";
+import {SecretStorage} from 'obsidian';
 
 // 配置常量
 const CONFIG = {
@@ -25,7 +26,8 @@ export class WebDAVExplorerService {
         private fileService: WebDAVFileService,
         private onFileListUpdate: (files: FileStat[], hasParent: boolean) => void,
         private onPathUpdate: (path: string) => void,
-        private onNotice: (message: string, isError?: boolean) => void
+        private onNotice: (message: string, isError?: boolean) => void,
+        private secretStorage: SecretStorage,
     ) {
     }
 
@@ -42,11 +44,11 @@ export class WebDAVExplorerService {
     public async initializeClient(): Promise<boolean> {
         if (!this.currentServer) return false;
 
-        const {url, username, password} = this.currentServer;
-        if (!url || !username || !password) return false;
-
+        const {url, username, secretId} = this.currentServer;
+        if (!url || !username || !secretId) return false;
         try {
-            this.client = new WebDAVClient(this.currentServer);
+            // 创建客户端实例时传入 secretStorage
+            this.client = new WebDAVClient(this.currentServer, this.secretStorage);
             return await this.client.initialize();
         } catch {
             this.client = null;

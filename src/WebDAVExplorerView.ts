@@ -89,7 +89,8 @@ export class WebDAVExplorerView extends View {
             this.fileService,
             (files: FileStat[], hasParent: boolean) => this.handleFileListUpdate(files, hasParent),
             () => this.updateBreadcrumb(),
-            (message: string, isError: boolean = true) => this.showNotice(message, isError)
+            (message: string, isError: boolean = true) => this.showNotice(message, isError),
+            this.app.secretStorage
         );
     }
 
