@@ -1,4 +1,4 @@
-import {App, PluginSettingTab, Setting, Notice, Modal, ButtonComponent, SecretStorage} from 'obsidian';
+import {App, PluginSettingTab, Setting, Notice, Modal, ButtonComponent} from 'obsidian';
 import WebDAVPlugin from './main';
 import {WebDAVServer} from './types';
 import {i18n} from "./i18n";
@@ -25,8 +25,6 @@ interface FormFieldConfig {
 //添加/编辑服务器的模态框
 class ServerEditModal extends Modal {
 
-    private secretStorage: SecretStorage;
-
     constructor(
         app: App,
         private plugin: WebDAVPlugin,
@@ -34,7 +32,6 @@ class ServerEditModal extends Modal {
         private onSave: (server: WebDAVServer) => void
     ) {
         super(app);
-        this.secretStorage = app.secretStorage;
     }
 
     onOpen(): void {
@@ -114,24 +111,35 @@ class ServerEditModal extends Modal {
 
         const btnContainer = container.createDiv({cls: 'webdav-modal-button-container'});
 
-        new ButtonComponent(btnContainer).setButtonText(i18n.t.settings.save).setCta().onClick(() => this.handleSave(server));
-        new ButtonComponent(btnContainer).setButtonText(i18n.t.settings.cancel).onClick(() => this.close());
+        new ButtonComponent(btnContainer)
+            .setButtonText(i18n.t.settings.save)
+            .setCta()
+            .onClick(() => this.handleSave(server));
+        new ButtonComponent(btnContainer)
+            .setButtonText(i18n.t.settings.cancel)
+            .onClick(() => this.close());
     }
 
     private renderDropdown(setting: Setting, config: FormFieldConfig, server: WebDAVServer): void {
-        const secretIds = this.secretStorage.listSecrets();
+        const secretIds = this.app.secretStorage.listSecrets();
 
-        setting.addButton(btn => btn
-            .setIcon('key-round')
-            .setTooltip(i18n.t.settings.openKeychain)
-            .setCta()
-            .onClick(() => this.openKeychain())
-        ).addDropdown(dropdown => {
-            dropdown.selectEl.addClass('webdav-keychain-dropdown');
-            dropdown.addOption('', '-- ' + i18n.t.settings.selectSecretId + ' --');
-            secretIds.forEach(id => dropdown.addOption(id, id));
-            dropdown.setValue(config.getValue(server)).onChange(v => config.setValue(server, v));
-        });
+        setting.addButton(btn => {
+            btn
+                .setIcon('key-round')
+                .setTooltip(i18n.t.settings.openKeychain)
+                .onClick(() => this.openKeychain());
+
+            btn.buttonEl.addClass('clickable-icon');
+        })
+            .addDropdown(dropdown => {
+                dropdown.selectEl.addClass('webdav-keychain-dropdown');
+                dropdown.addOption('', '-- ' + i18n.t.settings.selectSecretId + ' --');
+
+                secretIds.forEach(id => dropdown.addOption(id, id));
+                dropdown
+                    .setValue(config.getValue(server))
+                    .onChange(v => config.setValue(server, v));
+            });
     }
 
     private openKeychain(): void {
@@ -264,8 +272,8 @@ export class WebDAVSettingTab extends PluginSettingTab {
                 button
                     .setIcon('plus')
                     .setTooltip(i18n.t.settings.addServer)
-                    .setCta()
                     .onClick(() => this.handleAddServer())
+                    .buttonEl.addClass('clickable-icon')
             );
 
 
@@ -320,30 +328,30 @@ export class WebDAVSettingTab extends PluginSettingTab {
         const subtitleEl = setting.descEl;
         subtitleEl.setText(server.url);
 
-        // 编辑按钮
         new ButtonComponent(setting.controlEl)
             .setIcon('settings')
             .setTooltip(i18n.t.settings.edit)
-            .setCta()
-            .onClick(() => this.handleEditServer(server));
+            .onClick(() => this.handleEditServer(server))
+            .buttonEl.addClass('clickable-icon');
 
         // 复制按钮
         new ButtonComponent(setting.controlEl)
             .setIcon('copy')
             .setTooltip(i18n.t.settings.copy)
-            .setCta()
-            .onClick(() => this.handleCopyServer(server));
+            .onClick(() => this.handleCopyServer(server))
+            .buttonEl.addClass('clickable-icon');
 
         // 删除按钮
         new ButtonComponent(setting.controlEl)
             .setIcon('trash-2')
             .setTooltip(i18n.t.settings.delete)
-            .setWarning()
             .onClick(() => {
                 this.handleDeleteServer(server).catch(() => {
                     new Notice(i18n.t.settings.deleteFailed);
                 });
-            });
+            })
+            .buttonEl.addClass('clickable-icon')
+
     }
 
     // ==================== 事件处理方法 ===================
