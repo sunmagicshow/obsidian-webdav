@@ -130,16 +130,20 @@ class ServerEditModal extends Modal {
                 .onClick(() => this.openKeychain());
 
             btn.buttonEl.addClass('clickable-icon');
-        })
-            .addDropdown(dropdown => {
-                dropdown.selectEl.addClass('webdav-keychain-dropdown');
-                dropdown.addOption('', '-- ' + i18n.t.settings.selectSecretId + ' --');
+        }).addDropdown(dropdown => {
+            dropdown.selectEl.addClass('webdav-keychain-dropdown');
 
-                secretIds.forEach(id => dropdown.addOption(id, id));
-                dropdown
-                    .setValue(config.getValue(server))
-                    .onChange(v => config.setValue(server, v));
+            const options: Record<string, string> = {
+                '': '-- ' + i18n.t.settings.selectSecretId + ' --'
+            };
+            secretIds.forEach(id => {
+                options[id] = id;
             });
+            dropdown.addOptions(options)
+                .setValue(config.getValue(server))
+                .onChange(v => config.setValue(server, v));
+
+        });
     }
 
     private openKeychain(): void {
