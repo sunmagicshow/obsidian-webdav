@@ -13,16 +13,16 @@
   "license": "ISC",
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/node": "^22.18.10",
+    "@types/node": "^25.3.3",
     "@typescript-eslint/eslint-plugin": "^8.46.3",
     "@typescript-eslint/parser": "^8.46.3",
-    "esbuild": "^0.25.11",
+    "esbuild": "^0.27.3",
     "eslint": "^9.39.1",
     "eslint-plugin-obsidianmd": "^0.1.9",
     "globals": "^17.0.0",
     "obsidian": "^1.10.0",
     "ts-loader": "^9.5.2",
-    "ts-node": "^1.7.1",
+    "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3",
     "webpack": "^5.97.1",
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "axios": "^1.13.2",
-    "i18next": "^24.2.2",
+    "i18next": "^25.8.14",
     "webdav": "^5.8.0"
   }
 }
