@@ -20,10 +20,10 @@ await build({
 
 // 复制文件
 try {
-    const Content = readFileSync('src/styles.css', 'utf8');
-    const Content2 = readFileSync('manifest.json', 'utf8');
-    writeFileSync('dist/styles.css', Content);
-    writeFileSync('dist/manifest.json', Content2);
+    const Content_styles = readFileSync('src/styles.css', 'utf8');
+    const Content_manifest = readFileSync('manifest.json', 'utf8');
+    writeFileSync('dist/styles.css', Content_styles);
+    writeFileSync('dist/manifest.json', Content_manifest);
     console.log('✅ 文件复制成功');
 } catch {
     console.log('❌ 文件复制失败:');

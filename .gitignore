@@ -1,11 +1,11 @@
 # ==================== #
 # 依赖和构建输出        #
 # ==================== #
-node_modules/          # 依赖目录 - 必须忽略！
-dist/                  # 构建输出
-build/                 # 构建目录
-*.tsbuildinfo          # TypeScript 构建信息
-*.map                  # Source maps
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+*.map
 
 # ==================== #
 # 日志文件              #
@@ -64,11 +64,11 @@ Thumbs.db
 # ==================== #
 # Obsidian 特定         #
 # ==================== #
-.obsidian/            # Obsidian 配置和缓存
-*.mobile.*            # 移动端特定文件
+.obsidian/
+*.mobile.*
 
 # ==================== #
 # 插件开发特定          #
 # ==================== #
-manifest.json.bak     # 清单文件备份
-versions.json         # 版本信息（如果自动生成）
+manifest.json.bak
+versions.json
