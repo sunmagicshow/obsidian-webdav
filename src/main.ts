@@ -17,11 +17,10 @@ export default class WebDAVPlugin extends Plugin {
      * - 注册视图
      * - 添加设置面板
      * - 添加 ribbon 图标
-     * - 自动打开默认服务器视图
      */
     async onload() {
-        const savedSettings = await this.loadData() as Partial<WebDAVSettings>;
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, savedSettings);
+        // 简化配置加载逻辑
+        this.settings = {...DEFAULT_SETTINGS, ...(await this.loadData())};
 
         // 注册 WebDAV 文件浏览器视图
         this.registerView(
@@ -33,9 +32,7 @@ export default class WebDAVPlugin extends Plugin {
         this.addSettingTab(new WebDAVSettingTab(this.app, this));
 
         // 添加 ribbon 图标，点击打开 WebDAV 浏览器
-        this.addRibbonIcon('cloud', i18n.t.displayName, () => {
-            void this.activateView();
-        });
+        this.addRibbonIcon('cloud', i18n.t.displayName, () => void this.activateView());
     }
 
     // ==================== 服务器管理方法 ====================
@@ -43,8 +40,6 @@ export default class WebDAVPlugin extends Plugin {
     /**
      * 插件卸载时的清理操作
      * - 关闭所有 WebDAV 视图
-     * - 执行视图的卸载逻辑
-     * - 重置插件设置
      */
     onunload() {
         new Notice(i18n.t.settings.unloadSuccess);
@@ -57,13 +52,12 @@ export default class WebDAVPlugin extends Plugin {
     getCurrentServer(): WebDAVServer | null {
         const {servers, currentServerName} = this.settings;
 
-        // 优先使用当前选中的服务器
-        if (currentServerName) {
-            const server = servers.find(s => s.name === currentServerName);
-            if (server) return server;
-        }
+        // 优先使用当前选中的服务器，简化查找逻辑
+        const currentServer = currentServerName
+            ? servers.find(s => s.name === currentServerName)
+            : null;
 
-        return this.getDefaultServer();
+        return currentServer || this.getDefaultServer();
     }
 
     /**
@@ -73,12 +67,8 @@ export default class WebDAVPlugin extends Plugin {
     getDefaultServer(): WebDAVServer | null {
         const {servers} = this.settings;
 
-        // 首先查找标记为默认的服务器
-        const defaultServer = servers.find(s => s.isDefault);
-        if (defaultServer) return defaultServer;
-
-        // 如果没有默认服务器，返回第一个服务器
-        return servers.length > 0 ? servers[0] : null;
+        // 默认服务器查找逻辑
+        return servers.find(s => s.isDefault) || servers[0] || null;
     }
 
     /**
@@ -123,11 +113,11 @@ export default class WebDAVPlugin extends Plugin {
         await this.saveData(this.settings);
 
         // 查找已存在的 WebDAV 视图
-        let leaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
+        let existingLeaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
 
-        if (leaf) {
+        if (existingLeaf) {
             // 显示已存在的视图并强制刷新
-            await workspace.revealLeaf(leaf);
+            await workspace.revealLeaf(existingLeaf);
             if (leaf.view instanceof WebDAVExplorerView) {
                 leaf.view.onunload();
                 await leaf.view.onOpen();
@@ -136,23 +126,9 @@ export default class WebDAVPlugin extends Plugin {
         }
 
         // 创建新的视图
-        const rightLeaf = workspace.getRightLeaf(false);
-        if (rightLeaf) {
-            // 在右侧面板创建视图
-            await rightLeaf.setViewState({
-                type: VIEW_TYPE_WEBDAV_EXPLORER,
-                active: true,
-            });
-            await workspace.revealLeaf(rightLeaf);
-        } else {
-            // 分割当前标签页创建新视图
-            const newLeaf = workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
-            await newLeaf.setViewState({
-                type: VIEW_TYPE_WEBDAV_EXPLORER,
-                active: true,
-            });
-            await workspace.revealLeaf(newLeaf);
-        }
+        const targetLeaf = workspace.getRightLeaf(false) || workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
+        await targetLeaf.setViewState({type: VIEW_TYPE_WEBDAV_EXPLORER, active: true});
+        await workspace.revealLeaf(targetLeaf);
     }
 
 
@@ -162,13 +138,8 @@ export default class WebDAVPlugin extends Plugin {
      */
     public notifyServerChanged(): void {
         // 获取所有 WebDAV 视图
-        const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER);
-
-        leaves.forEach(leaf => {
-            if (leaf.view instanceof WebDAVExplorerView) {
-                // 强制视图重新加载服务器数据
-                leaf.view.onServerChanged();
-            }
+        this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER).forEach(leaf => {
+            (leaf.view as WebDAVExplorerView).onServerChanged();
         });
     }
 }
