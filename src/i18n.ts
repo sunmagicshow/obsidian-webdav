@@ -159,7 +159,7 @@ const zh: LangPack = {
         copySuffix:'_副本',
         serverCopied: '已复制服务器: {name}',
         delete: '删除',
-        confirmDeleteMessage: "确定要删除服务器 '{name}' 吗？此操作无法撤销。",
+        confirmDeleteMessage: "确定要删除服务器 {name} 吗？此操作无法撤销。",
         confirm: "确认",
 
         // 状态提示
@@ -264,7 +264,7 @@ const en: LangPack = {
         copySuffix:'_copy',
         serverCopied: 'Server copied: {name}',
         delete: 'Delete',
-        confirmDeleteMessage: "Are you sure you want to delete server '{name}'? This action cannot be undone.",
+        confirmDeleteMessage: "Are you sure you want to delete server {name}? This action cannot be undone.",
         confirm: "Confirm",
         deleteFailed: 'Failed to delete server',
 
