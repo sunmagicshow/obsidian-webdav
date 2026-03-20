@@ -435,14 +435,14 @@ export class WebDAVExplorerView extends View {
 
         const menu = new Menu();
         servers.forEach(server => {
-            const isSelected = server.name === this.plugin.getCurrentServer()?.name;
+            const isSelected = server.id === this.plugin.getCurrentServer()?.id;
             menu.addItem(item => {
                 const space = '\u2009\u2009\u2009\u2009\u2009\u2009';
                 const title = isSelected ? server.name : `${space}${server.name}`;
 
                 item.setTitle(title)
                     .setIcon(isSelected ? 'check' : '')
-                    .onClick(async () => await this.switchServer(server.name));
+                    .onClick(async () => await this.switchServer(server.id));
             });
         });
 
@@ -452,11 +452,12 @@ export class WebDAVExplorerView extends View {
     /**
      * 切换服务器
      */
-    private async switchServer(serverName: string): Promise<void> {
-        const server = this.plugin.getServerByName(serverName);
+    private async switchServer(serverId: string): Promise<void> {
+        const server = this.plugin.settings.servers.find(s => s.id === serverId);
         if (!server) return;
 
-        this.plugin.settings.currentServerName = serverName;
+        this.plugin.settings.currentServerName = server.name;
+        this.plugin.settings.currentServerId = server.id;
         await this.plugin.saveData(this.plugin.settings);
 
         this.explorerService.setCurrentServer(server);

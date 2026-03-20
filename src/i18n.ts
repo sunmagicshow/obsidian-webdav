@@ -25,7 +25,6 @@ export interface LangPack {
         url: string;
         urlDesc?: string;
         username: string;
-        password: string;
         secretId: string;
         secretIdDesc: string;
         selectSecretId: string;
@@ -129,7 +128,6 @@ const zh: LangPack = {
         url: '服务器地址',
         urlDesc: '完整的 WebDAV 服务器地址',
         username: '用户名',
-        password: '密码',
         secretId: '钥匙串ID',
         secretIdDesc: '从钥匙串设置中选择',
         selectSecretId: '选择密钥ID',
@@ -240,7 +238,6 @@ const en: LangPack = {
         url: 'Server url',
         urlDesc: 'Full WebDAV server url',
         username: 'Username',
-        password: 'Password',
         secretId: 'Keychain ID',
         secretIdDesc: 'Select from keychain',
         selectSecretId: 'Select keychain ID',

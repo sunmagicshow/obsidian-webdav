@@ -28,16 +28,19 @@ export default class WebDAVPlugin extends Plugin {
      * - 添加 ribbon 图标
      */
     async onload() {
+        // --- 1. 加载并合并设置 ---
         const savedSettings = await this.loadData() as Partial<WebDAVSettings>;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, savedSettings);
 
+        // --- 2. 数据迁移逻辑：补全缺失的 ID ---
+        await this.migrateSettings();
 
-        // 1. 初始化认证管理器（会自动应用证书放行策略）
+        // --- 3. 初始化认证管理器 ---
         this.authManager = new WebDAVAuthManager(this.app, this.manifest.id);
         this.debouncedRefresh = debounce(() => {
             void this.refreshAuth();
         }, 500, true);
-        // 2. 启动时执行静默握手，激活浏览器凭据缓存
+
         void this.refreshAuth();
 
         // 3.注册事件：直接传入防抖函数
@@ -60,6 +63,36 @@ export default class WebDAVPlugin extends Plugin {
         // 添加 ribbon 图标，点击打开 WebDAV 浏览器
         this.addRibbonIcon('cloud', i18n.t.displayName, () => void this.activateView());
     }
+
+
+    /**
+     * 数据迁移：为旧版本服务器配置补全 ID
+     */
+    private async migrateSettings() {
+        let hasChanges = false;
+        const {servers} = this.settings;
+
+        if (!servers || servers.length === 0) return;
+
+        servers.forEach((server) => {
+            // 如果服务器没有 id，则根据当前时间戳生成一个
+            if (!server.id) {
+                server.id = `server_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+                hasChanges = true;
+
+                // 如果这个被补全 ID 的服务器恰好是当前正在使用的服务器
+                // 同步更新 currentServerId 以确保 ID 匹配逻辑生效
+                if (server.name === this.settings.currentServerName && !this.settings.currentServerId) {
+                    this.settings.currentServerId = server.id;
+                }
+            }
+        });
+        // 只有在数据真正发生变化时才保存，避免多余的 IO 操作
+        if (hasChanges) {
+            await this.saveData(this.settings);
+        }
+    }
+
 
     /**
      * 核心异步握手逻辑
@@ -112,14 +145,14 @@ export default class WebDAVPlugin extends Plugin {
      * @returns 当前服务器或默认服务器，如果没有则返回 null
      */
     getCurrentServer(): WebDAVServer | null {
-        const {servers, currentServerName} = this.settings;
+        const {servers, currentServerId, currentServerName} = this.settings;
 
-        // 优先使用当前选中的服务器，简化查找逻辑
-        const currentServer = currentServerName
-            ? servers.find(s => s.name === currentServerName)
-            : null;
-
-        return currentServer || this.getDefaultServer();
+        // 优先通过 ID 查找
+        if (currentServerId) {
+            return servers.find(s => s.id === currentServerId) || null;
+        }
+        // 兼容老版本通过 Name 查找
+        return servers.find(s => s.name === currentServerName) || servers[0] || null;
     }
 
     /**
@@ -140,18 +173,6 @@ export default class WebDAVPlugin extends Plugin {
     getServers(): WebDAVServer[] {
         return this.settings.servers;
     }
-
-    // ==================== 视图管理方法 ====================
-
-    /**
-     * 根据服务器名称查找服务器配置
-     * @param name - 服务器名称
-     * @returns 匹配的服务器配置或 null
-     */
-    getServerByName(name: string): WebDAVServer | null {
-        return this.settings.servers.find(s => s.name === name) || null;
-    }
-
     // ==================== 设置管理方法 ====================
 
     /**
@@ -192,6 +213,4 @@ export default class WebDAVPlugin extends Plugin {
         await targetLeaf.setViewState({type: VIEW_TYPE_WEBDAV_EXPLORER, active: true});
         await workspace.revealLeaf(targetLeaf);
     }
-
-
 }

@@ -1,4 +1,3 @@
-
 import {App, PluginSettingTab, Setting, Notice, Modal, ButtonComponent} from 'obsidian';
 import WebDAVPlugin from './main';
 import {WebDAVServer} from './types';
@@ -23,23 +22,23 @@ interface FormFieldConfig {
     setValue: (server: WebDAVServer, value: string) => void;
 }
 
-//添加/编辑服务器的模态框
+// --- 添加/编辑服务器的模态框 ---
 class ServerEditModal extends Modal {
 
     constructor(
         app: App,
         private plugin: WebDAVPlugin,
-        private server: WebDAVServer | null,
+        private server: WebDAVServer,
         private onSave: (server: WebDAVServer) => void
     ) {
         super(app);
     }
 
     onOpen(): void {
-        const isEdit = this.server !== null;
-        const serverData = this.server || this.createNewServer();
+        // 通过 ID 判断是否已存在于设置列表中，决定标题显示
+        const isEdit = this.plugin.settings.servers.some(s => s.id === this.server.id);
         this.contentEl.createEl('h2', {text: i18n.t.settings[isEdit ? 'editServer' : 'addServer']});
-        this.renderForm(this.contentEl, serverData);
+        this.renderForm(this.contentEl, this.server);
     }
 
     private renderForm(container: HTMLElement, server: WebDAVServer): void {
@@ -116,6 +115,7 @@ class ServerEditModal extends Modal {
             .setButtonText(i18n.t.settings.save)
             .setCta()
             .onClick(() => this.handleSave(server));
+
         new ButtonComponent(btnContainer)
             .setButtonText(i18n.t.settings.cancel)
             .onClick(() => this.close());
@@ -150,18 +150,13 @@ class ServerEditModal extends Modal {
     private openKeychain(): void {
         // 关闭当前模态框
         this.close();
-
         // 打开 Obsidian 设置面板
         this.app.setting.open();
-
         // 等待设置面板加载完成后，导航到正确的选项卡
         window.setTimeout(() => {
             try {
                 const keychainTab = activeDocument.querySelector('.vertical-tab-nav-item[data-setting-id="keychain"]');
-                if (keychainTab) {
-                    (keychainTab as HTMLElement).click();
-                    return;
-                }
+                if (keychainTab) (keychainTab as HTMLElement).click();
             } catch {
                 new Notice(i18n.t.settings.keyChainFailed);
             }
@@ -169,12 +164,9 @@ class ServerEditModal extends Modal {
     }
 
     private handleSave(server: WebDAVServer): void {
-        if (!this.validate(server)) {
-            return;
-        }
+        if (!this.validate(server)) return;
         this.onSave(server);
         this.close();
-
     }
 
     private validate(server: WebDAVServer): boolean {
@@ -182,7 +174,6 @@ class ServerEditModal extends Modal {
             new Notice(i18n.t.settings.nameRequired);
             return false;
         }
-
         if (!server.url.trim()) {
             new Notice(i18n.t.settings.urlRequired);
             return false;
@@ -192,9 +183,9 @@ class ServerEditModal extends Modal {
             return false;
         }
 
-        // 检查名称重复（编辑时排除自身）
+        // 使用 ID 排除自身，解决副本重名误判
         const isDuplicate = this.plugin.settings.servers.some(s =>
-            s.name === server.name && (this.server === null || s !== this.server)
+            s.name === server.name && s.id !== server.id
         );
 
         if (isDuplicate) {
@@ -204,37 +195,9 @@ class ServerEditModal extends Modal {
 
         return true;
     }
-
-    private createNewServer(): WebDAVServer {
-        const baseName = i18n.t.settings.serverName;
-        const newName = this.generateUniqueServerName(baseName);
-
-        return {
-            name: newName,
-            url: '',
-            username: '',
-            secretId: '',
-            remoteDir: '',
-            urlPrefix: '',
-            downloadPath: '',
-            isDefault: this.plugin.settings.servers.length === 0
-        };
-    }
-
-    private generateUniqueServerName(baseName: string): string {
-        let num = 1;
-        let newName = `${baseName} ${num}`;
-
-        while (this.plugin.settings.servers.some(s => s.name === newName)) {
-            num++;
-            newName = `${baseName} ${num}`;
-        }
-
-        return newName;
-    }
 }
 
-// WebDAV 插件设置面板 使用模态框进行服务器编辑，主页面显示服务器列表概览
+// --- WebDAV 插件设置面板 ---
 export class WebDAVSettingTab extends PluginSettingTab {
     icon = 'cloud';
     private readonly plugin: WebDAVPlugin;
@@ -248,10 +211,8 @@ export class WebDAVSettingTab extends PluginSettingTab {
     display(): void {
         const {containerEl} = this;
         containerEl.empty();
-
         this.renderDefaultServerSection();
         this.renderServersLists();
-
     }
 
     // ==================== 主要区域渲染方法 ====================
@@ -259,7 +220,6 @@ export class WebDAVSettingTab extends PluginSettingTab {
     // 渲染默认服务器设置区域
     private renderDefaultServerSection(): void {
         const {servers} = this.plugin.settings;
-
         if (servers.length === 0) return;
 
         const defaultServer = servers.find(s => s.isDefault) || servers[0];
@@ -280,7 +240,6 @@ export class WebDAVSettingTab extends PluginSettingTab {
                     .onClick(() => this.handleAddServer())
                     .buttonEl.addClass('clickable-icon')
             );
-
 
         this.containerEl.createEl('hr');
     }
@@ -317,11 +276,9 @@ export class WebDAVSettingTab extends PluginSettingTab {
     private renderServersList(server: WebDAVServer, container: HTMLElement): void {
         const setting = new Setting(container)
             .setName(server.name)
-            .setDesc(server.url)
+            .setDesc(server.url);
 
-        // 添加自定义样式和徽章
         setting.nameEl.addClass('webdav-server-name');
-
         if (server.isDefault) {
             setting.nameEl.createEl('span', {
                 text: i18n.t.settings.default,
@@ -355,18 +312,22 @@ export class WebDAVSettingTab extends PluginSettingTab {
                     new Notice(i18n.t.settings.deleteFailed);
                 });
             })
-            .buttonEl.addClass('clickable-icon')
-
+            .buttonEl.addClass('clickable-icon');
     }
 
     // ==================== 事件处理方法 ===================
     // 处理默认服务器变更
     private async handleDefaultServerChange(serverName: string): Promise<void> {
-        if (!serverName) return;
+        const target = this.plugin.settings.servers.find(s => s.name === serverName);
+        if (!target) return;
 
         this.plugin.settings.servers.forEach(server => {
-            server.isDefault = server.name === serverName;
+            server.isDefault = server.id === target.id;
         });
+
+        // 同时记录 ID 和 Name
+        this.plugin.settings.currentServerId = target.id;
+        this.plugin.settings.currentServerName = target.name;
 
         await this.saveSettingsAndRefresh();
         new Notice(i18n.t.settings.defaultServerUpdated);
@@ -374,19 +335,28 @@ export class WebDAVSettingTab extends PluginSettingTab {
 
     // 添加服务器
     private handleAddServer(): void {
-        new ServerEditModal(this.app, this.plugin, null, (server) => {
-            this.saveNewServer(server).catch(() => {
-                new Notice(i18n.t.settings.saveFailed);
-            });
+        const newServer: WebDAVServer = {
+            id: `id-${Date.now()}`,
+            name: this.generateUniqueServerName(i18n.t.settings.serverName),
+            url: '',
+            username: '',
+            secretId: '',
+            remoteDir: '',
+            urlPrefix: '',
+            downloadPath: '',
+            isDefault: this.plugin.settings.servers.length === 0
+        };
+
+        new ServerEditModal(this.app, this.plugin, newServer, (server) => {
+            this.saveNewServer(server).catch(() => new Notice(i18n.t.settings.saveFailed));
         }).open();
     }
 
     // 编辑服务器
     private handleEditServer(server: WebDAVServer): void {
-        new ServerEditModal(this.app, this.plugin, server, (updatedServer) => {
-            this.updateServer(server, updatedServer).catch(() => {
-                new Notice(i18n.t.settings.saveFailed);
-            });
+        const serverCopy: WebDAVServer = {...server};
+        new ServerEditModal(this.app, this.plugin, serverCopy, (updatedServer) => {
+            this.updateServer(server, updatedServer).catch(() => new Notice(i18n.t.settings.saveFailed));
         }).open();
     }
 
@@ -398,142 +368,127 @@ export class WebDAVSettingTab extends PluginSettingTab {
         // 创建服务器副本,新服务器不作为默认服务器
         const copiedServer: WebDAVServer = {
             ...server,
+            id: `id-${Date.now()}`, // 必须生成新 ID
             name: newName,
             isDefault: false
         };
 
-        // 添加到设置中
         this.plugin.settings.servers.push(copiedServer);
-
-        // 保存设置并刷新界面
-        this.saveSettingsAndRefresh().catch(() => {
-            new Notice(i18n.t.settings.saveFailed);
-        });
-
-        new Notice(i18n.t.settings.serverCopied.replace('{name}', newName));
+        this.saveSettingsAndRefresh().catch(() => new Notice(i18n.t.settings.saveFailed));
     }
 
-    // 生成复制服务器的唯一名称
-    private generateCopyServerName(originalName: string): string {
-        const baseName = `${originalName}` + i18n.t.settings.copySuffix;
-        let newName = baseName;
-        let counter = 1;
-
-        // 检查名称是否已存在，如果存在则添加数字后缀
-        while (this.plugin.settings.servers.some(s => s.name === newName)) {
-            counter++;
-            newName = `${baseName}${counter}`;
-        }
-
-        return newName;
-    }
-
-    // 删除服务器
+// 删除服务器
     private async handleDeleteServer(server: WebDAVServer): Promise<void> {
-        const {servers} = this.plugin.settings;
-        const serverIndex = servers.findIndex(s => s === server);
-
-        if (serverIndex === -1) return;
-
-        // 创建轻量确认对话框
         const confirmed = await this.showDeleteConfirmation(server.name);
         if (!confirmed) return;
 
-        // 从服务器列表中移除
-        servers.splice(serverIndex, 1);
-
-        // 处理默认服务器逻辑
-        this.handleDefaultServerAfterDeletion(server);
-
-        await this.saveSettingsAndRefresh();
-        this.plugin.notifyServerChanged();
-        new Notice(i18n.t.settings.serverDeleted);
+        const {servers} = this.plugin.settings;
+        const index = servers.findIndex(s => s.id === server.id);
+        if (index !== -1) {
+            servers.splice(index, 1);
+            this.handleDefaultServerAfterDeletion(server);
+            await this.saveSettingsAndRefresh();
+            this.plugin.notifyServerChanged();
+        }
     }
 
-    //显示删除确认对话框
-    private showDeleteConfirmation(serverName: string): Promise<boolean> {
+    // --- 内部逻辑与工具方法 ---
+
+    private async saveNewServer(server: WebDAVServer): Promise<void> {
+        this.plugin.settings.servers.push(server);
+        // 如果是第一个服务器或显式设为默认，更新当前 ID
+        if (server.isDefault) {
+            this.plugin.settings.currentServerId = server.id;
+            this.plugin.settings.currentServerName = server.name;
+        }
+        await this.saveSettingsAndRefresh();
+        this.plugin.notifyServerChanged();
+    }
+
+    private async updateServer(oldServer: WebDAVServer, updatedServer: WebDAVServer): Promise<void> {
+        const index = this.plugin.settings.servers.findIndex(s => s.id === oldServer.id);
+        if (index !== -1) {
+            this.plugin.settings.servers[index] = updatedServer;
+
+            // 使用 ID 匹配判断是否是当前正在查看的服务器
+            if (oldServer.id === this.plugin.settings.currentServerId) {
+                this.plugin.settings.currentServerId = updatedServer.id;
+                this.plugin.settings.currentServerName = updatedServer.name;
+            }
+
+            await this.saveSettingsAndRefresh();
+            this.plugin.notifyServerChanged();
+        }
+    }
+
+    private generateUniqueServerName(baseName: string): string {
+        let num = 1;
+        let newName = `${baseName} ${num}`;
+        while (this.plugin.settings.servers.some(s => s.name === newName)) {
+            num++;
+            newName = `${baseName} ${num}`;
+        }
+        return newName;
+    }
+
+    private generateCopyServerName(originalName: string): string {
+        const suffix = i18n.t.settings.copySuffix || " (Copy)";
+        const baseName = `${originalName}${suffix}`;
+        let newName = baseName;
+        let counter = 1;
+        while (this.plugin.settings.servers.some(s => s.name === newName)) {
+            counter++;
+            newName = `${baseName} ${counter}`;
+        }
+        return newName;
+    }
+
+    private async showDeleteConfirmation(serverName: string): Promise<boolean> {
         return new Promise((resolve) => {
             const modal = new Modal(this.app);
-
             modal.titleEl.setText(i18n.t.settings.confirmDelete);
-            modal.contentEl.createEl('p', {
-                text: i18n.t.settings.confirmDeleteMessage.replace('{name}', serverName)
-            });
-
+            modal.contentEl.createEl('p', {text: i18n.t.settings.confirmDeleteMessage.replace('{name}', serverName)});
             const buttonContainer = modal.contentEl.createDiv({cls: 'webdav-modal-button-container'});
-
-            // 确认删除按钮
             new ButtonComponent(buttonContainer).setButtonText(i18n.t.settings.confirm).setWarning().onClick(() => {
                 modal.close();
                 resolve(true);
             });
-
-            // 取消按钮
             new ButtonComponent(buttonContainer).setButtonText(i18n.t.settings.cancel).onClick(() => {
                 modal.close();
                 resolve(false);
             });
-
             modal.open();
         });
     }
 
-    // 保存新服务器
-    private async saveNewServer(server: WebDAVServer): Promise<void> {
-        this.plugin.settings.servers.push(server);
-
-        // 如果是第一个服务器或设置为默认，更新当前服务器
-        if (server.isDefault || this.plugin.settings.servers.length === 1) {
-            this.plugin.settings.currentServerName = server.name;
-        }
-
-        await this.saveSettingsAndRefresh();
-        this.plugin.notifyServerChanged();
-        new Notice(i18n.t.settings.serverAdded);
-    }
-
-    // 更新服务器
-    private async updateServer(oldServer: WebDAVServer, updatedServer: WebDAVServer): Promise<void> {
-        const serverIndex = this.plugin.settings.servers.findIndex(s => s === oldServer);
-
-        if (serverIndex === -1) return;
-
-        this.plugin.settings.servers[serverIndex] = updatedServer;
-
-        // 如果更新的是当前服务器或默认服务器，更新相关设置
-        if (oldServer.name === this.plugin.settings.currentServerName) {
-            this.plugin.settings.currentServerName = updatedServer.name;
-        }
-
-        await this.saveSettingsAndRefresh();
-        this.plugin.notifyServerChanged();
-        new Notice(i18n.t.settings.serverUpdated);
-    }
-
-    // ==================== 工具方法 ====================
-    // 处理删除服务器后的默认服务器逻辑
     private handleDefaultServerAfterDeletion(deletedServer: WebDAVServer): void {
         const {servers} = this.plugin.settings;
 
+        // 1. 如果删光了，清空所有引用
         if (servers.length === 0) {
+            this.plugin.settings.currentServerId = '';
             this.plugin.settings.currentServerName = '';
             return;
         }
 
-        // 如果删除的是默认服务器，设置新的默认服务器
-        if (deletedServer.isDefault) {
+        // 2. 检查当前是否还存在默认服务器
+        const hasDefault = servers.some(s => s.isDefault);
+
+        // 3. 如果删掉的是默认服务器，或者当前没有默认服务器了
+        if (deletedServer.isDefault || !hasDefault) {
+            // 强制将列表中的第一个设为默认
             servers[0].isDefault = true;
-            this.plugin.settings.currentServerName = servers[0].name;
         }
 
-        // 如果删除的是当前服务器，切换到默认服务器
-        if (deletedServer.name === this.plugin.settings.currentServerName) {
-            const defaultServer = servers.find(s => s.isDefault) || servers[0];
-            this.plugin.settings.currentServerName = defaultServer.name;
+        // 4. 更新当前活跃服务器的引用（ID 和 Name）
+        // 如果删掉的正是在视图中打开的那台，则切换到新的默认服务器
+        if (deletedServer.id === this.plugin.settings.currentServerId) {
+            const nextActive = servers.find(s => s.isDefault) || servers[0];
+            this.plugin.settings.currentServerId = nextActive.id;
+            this.plugin.settings.currentServerName = nextActive.name;
         }
     }
 
-    // 保存设置并刷新界面
     private async saveSettingsAndRefresh(): Promise<void> {
         await this.plugin.saveData(this.plugin.settings);
         this.display();
