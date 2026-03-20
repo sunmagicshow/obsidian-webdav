@@ -19,8 +19,8 @@ export default class WebDAVPlugin extends Plugin {
      * - 添加 ribbon 图标
      */
     async onload() {
-        // 简化配置加载逻辑
-        this.settings = {...DEFAULT_SETTINGS, ...(await this.loadData())};
+        const savedSettings = await this.loadData() as Partial<WebDAVSettings>;
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, savedSettings);
 
         // 注册 WebDAV 文件浏览器视图
         this.registerView(
@@ -118,9 +118,9 @@ export default class WebDAVPlugin extends Plugin {
         if (existingLeaf) {
             // 显示已存在的视图并强制刷新
             await workspace.revealLeaf(existingLeaf);
-            if (leaf.view instanceof WebDAVExplorerView) {
-                leaf.view.onunload();
-                await leaf.view.onOpen();
+            if (existingLeaf.view instanceof WebDAVExplorerView) {
+                existingLeaf.view.onunload();
+                await existingLeaf.view.onOpen();
             }
             return;
         }

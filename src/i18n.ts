@@ -49,7 +49,7 @@ export interface LangPack {
         cancel: string;
         edit: string;
         copy: string;
-        copySuffix:string;
+        copySuffix: string;
         serverCopied: string;
         delete: string;
         confirmDeleteMessage: string;
@@ -67,8 +67,6 @@ export interface LangPack {
         default: string;
         current: string;
         confirmDelete: string;
-
-
     };
     view: {
         connectionFailed: string;
@@ -93,11 +91,17 @@ export interface LangPack {
         selectServer: string;
         switchSuccess: string;
     };
+    webdavClient: {
+        webdavClientNotInitialized: string;
+        failedToGetFileContents: string;
+    };
     contextMenu: {
         copyUrl: string;
         download: string;
+        downloading: string;
         urlCopied: string;
         copyFailed: string;
+        notSupportFormat: string;
         downloadSuccess: string;
         downloadFailed: string;
         connectionError: string;
@@ -156,7 +160,7 @@ const zh: LangPack = {
         cancel: '取消',
         edit: '编辑',
         copy: '复制',
-        copySuffix:'_副本',
+        copySuffix: '_副本',
         serverCopied: '已复制服务器: {name}',
         delete: '删除',
         confirmDeleteMessage: "确定要删除服务器 {name} 吗？此操作无法撤销。",
@@ -198,11 +202,17 @@ const zh: LangPack = {
         selectServer: '选择服务器',
         switchSuccess: '切换成功',
     },
+    webdavClient: {
+        webdavClientNotInitialized: 'WebDAV 客户端未初始化',
+        failedToGetFileContents: '获取文件内容失败',
+    },
     contextMenu: {
         copyUrl: '复制链接',
         download: '下载',
+        downloading: '正在下载',
         urlCopied: '链接已复制',
         copyFailed: '复制失败',
+        notSupportFormat: '不支持的格式,使用系统下载',
         downloadSuccess: '下载成功',
         downloadFailed: '下载失败',
         connectionError: '连接错误',
@@ -261,7 +271,7 @@ const en: LangPack = {
         cancel: 'Cancel',
         edit: 'Edit',
         copy: 'Copy',
-        copySuffix:'_copy',
+        copySuffix: '_copy',
         serverCopied: 'Server copied: {name}',
         delete: 'Delete',
         confirmDeleteMessage: "Are you sure you want to delete server {name}? This action cannot be undone.",
@@ -278,8 +288,6 @@ const en: LangPack = {
         // 标识文本
         default: 'Default',
         current: 'Current',
-
-
     },
     view: {
         connectionFailed: 'Connection failed',
@@ -304,11 +312,17 @@ const en: LangPack = {
         selectServer: 'Select server',
         switchSuccess: 'Switch success',
     },
+    webdavClient: {
+        webdavClientNotInitialized: 'WebDAV client not initialized',
+        failedToGetFileContents: 'Failed to get file contents',
+    },
     contextMenu: {
         copyUrl: 'Copy url',
         download: 'Download',
+        downloading: 'Downloading',
         urlCopied: 'Url copied',
         copyFailed: 'Copy failed',
+        notSupportFormat: 'Not supported format,use system download',
         downloadSuccess: 'Download success',
         downloadFailed: 'Download failed',
         connectionError: 'Connection error',

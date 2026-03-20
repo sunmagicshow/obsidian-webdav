@@ -1,3 +1,4 @@
+
 import {App, PluginSettingTab, Setting, Notice, Modal, ButtonComponent} from 'obsidian';
 import WebDAVPlugin from './main';
 import {WebDAVServer} from './types';
@@ -156,7 +157,7 @@ class ServerEditModal extends Modal {
         // 等待设置面板加载完成后，导航到正确的选项卡
         window.setTimeout(() => {
             try {
-                const keychainTab = document.querySelector('.vertical-tab-nav-item[data-setting-id="keychain"]');
+                const keychainTab = activeDocument.querySelector('.vertical-tab-nav-item[data-setting-id="keychain"]');
                 if (keychainTab) {
                     (keychainTab as HTMLElement).click();
                     return;
@@ -372,7 +373,6 @@ export class WebDAVSettingTab extends PluginSettingTab {
     }
 
     // 添加服务器
-
     private handleAddServer(): void {
         new ServerEditModal(this.app, this.plugin, null, (server) => {
             this.saveNewServer(server).catch(() => {

@@ -2,6 +2,8 @@ import {App, Notice} from 'obsidian';
 import {FileStat} from 'webdav';
 import {WebDAVServer} from './types';
 import {WebDAVClient} from './WebDAVClient';
+import {i18n} from "./i18n";
+import {SUPPORTED_TEXT_EXTS, SUPPORTED_BINARY_EXTS, ICON_MAP} from './constants';
 
 /**
  * WebDAV 文件服务类
@@ -18,46 +20,50 @@ export class WebDAVFileService {
      * @param client - WebDAV 客户端实例
      */
     async downloadFile(file: FileStat, server: WebDAVServer, client: WebDAVClient): Promise<void> {
-        const downloadingMessage = new Notice(`⬇️ 正在下载 ${file.basename}`, 0);
+        const ext = file.basename.split('.').pop()?.toLowerCase() || '';
+
+        // 1. 预先判断分流类型
+        const isText = SUPPORTED_TEXT_EXTS.has(ext);
+        const isBinary = SUPPORTED_BINARY_EXTS.has(ext);
+        const isObsidianSupported = isText || isBinary;
+
+        // 2. 只有 Obsidian 支持的格式才显示“下载中”提示
+        let downloadingMessage: Notice | null = null;
+        if (isObsidianSupported) {
+            downloadingMessage = new Notice(`⬇️${i18n.t.contextMenu.downloading}`);
+        }
 
         try {
-            const arrayBuffer = await client.getFileContents(file.filename);
-            const downloadDir = await this.getDownloadDirectory(server);
+            if (isObsidianSupported) {
+                const arrayBuffer = await client.getFileContents(file.filename);
+                const filePath = await this.prepareFilePath(file.basename, server);
 
-            // 构建文件路径
-            let filePath: string;
-            if (downloadDir === '') {
-                // 如果下载目录是根目录，直接使用文件名
-                filePath = file.basename;
-            } else {
-                // 否则拼接目录和文件名
-                filePath = `${downloadDir}/${file.basename}`;
-            }
-
-            // 处理文件名冲突
-            filePath = await this.handleExistingFile(filePath, file.basename);
-            const adapter = this.app.vault.adapter;
-
-            // 其余代码保持不变...
-            if (this.isTextFile(file.basename)) {
-                const decoder = new TextDecoder('utf-8');
-                await adapter.write(filePath, decoder.decode(arrayBuffer));
-            } else {
-                if (typeof adapter.writeBinary === 'function') {
-                    await adapter.writeBinary(filePath, arrayBuffer);
+                if (isText) {
+                    const decoder = new TextDecoder('utf-8');
+                    await this.app.vault.adapter.write(filePath, decoder.decode(arrayBuffer));
                 } else {
-                    this.fallbackDownload(new Blob([arrayBuffer]), file.basename);
-                    downloadingMessage.hide();
-                    return;
+                    await this.app.vault.adapter.writeBinary(filePath, arrayBuffer);
                 }
+
+                // downloadingMessage?.hide();
+                new Notice(`✅ ${i18n.t.contextMenu.downloadSuccess}`);
+            } else {
+                const arrayBuffer = await client.getFileContents(file.filename);
+                const blob = new Blob([arrayBuffer], {type: 'application/octet-stream'});
+                this.fallbackDownload(blob, file.basename);
+
+                new Notice(`ℹ️ ${i18n.t.contextMenu.notSupportFormat}`);
             }
-
-            downloadingMessage.hide();
-
-        } catch {
-            downloadingMessage.hide();
-            throw new Error('下载失败');
+        } catch (e) {
+            downloadingMessage?.hide();
+            throw e;
         }
+    }
+
+    private async prepareFilePath(basename: string, server: WebDAVServer): Promise<string> {
+        const downloadDir = await this.getDownloadDirectory(server);
+        const filePath = downloadDir === '' ? basename : `${downloadDir}/${basename}`;
+        return await this.handleExistingFile(filePath);
     }
 
     /**
@@ -68,161 +74,7 @@ export class WebDAVFileService {
     getFileIcon(filename: string): string {
         const ext = filename.split('.').pop()?.toLowerCase() || '';
 
-        // 文件扩展名到 Obsidian 图标的映射
-        const iconMap: Record<string, string> = {
-            // 文档类型
-            'md': 'file-text',
-            'txt': 'file-text',
-            'pdf': 'file-text',
-            'doc': 'file-text',
-            'docx': 'file-text',
-            'rtf': 'file-text',
-            'odt': 'file-text',
-            'pages': 'file-text',
-
-            // 表格类型
-            'xls': 'table',
-            'xlsx': 'table',
-            'csv': 'table',
-            'ods': 'table',
-            'numbers': 'table',
-
-            // 演示文稿
-            'ppt': 'presentation',
-            'pptx': 'presentation',
-            'key': 'presentation',
-            'odp': 'presentation',
-
-            // 图片类型
-            'jpg': 'image',
-            'jpeg': 'image',
-            'png': 'image',
-            'gif': 'image',
-            'svg': 'image',
-            'webp': 'image',
-            'bmp': 'image',
-            'tiff': 'image',
-            'tif': 'image',
-            'ico': 'image',
-            'heic': 'image',
-            'raw': 'image',
-            'psd': 'image',
-            'ai': 'image',
-            'eps': 'image',
-
-            // 视频类型
-            'mp4': 'video',
-            'mkv': 'video',
-            'avi': 'video',
-            'mov': 'video',
-            'wmv': 'video',
-            'flv': 'video',
-            'webm': 'video',
-            'm4v': 'video',
-            '3gp': 'video',
-            'mpeg': 'video',
-            'mpg': 'video',
-
-            // 音频类型
-            'mp3': 'audio-file',
-            'wav': 'audio-file',
-            'flac': 'audio-file',
-            'aac': 'audio-file',
-            'ogg': 'audio-file',
-            'm4a': 'audio-file',
-            'wma': 'audio-file',
-            'aiff': 'audio-file',
-            'mid': 'audio-file',
-            'midi': 'audio-file',
-
-            // 压缩文件
-            'zip': 'archive',
-            'rar': 'archive',
-            '7z': 'archive',
-            'tar': 'archive',
-            'gz': 'archive',
-            'bz2': 'archive',
-            'xz': 'archive',
-            'iso': 'archive',
-            'dmg': 'archive',
-
-            // 代码文件
-            'js': 'file-code',
-            'ts': 'file-code',
-            'jsx': 'file-code',
-            'tsx': 'file-code',
-            'html': 'file-code',
-            'htm': 'file-code',
-            'css': 'file-code',
-            'scss': 'file-code',
-            'sass': 'file-code',
-            'less': 'file-code',
-            'json': 'file-code',
-            'xml': 'file-code',
-            'yml': 'file-code',
-            'yaml': 'file-code',
-            'php': 'file-code',
-            'py': 'file-code',
-            'java': 'file-code',
-            'c': 'file-code',
-            'cpp': 'file-code',
-            'h': 'file-code',
-            'hpp': 'file-code',
-            'cs': 'file-code',
-            'go': 'file-code',
-            'rs': 'file-code',
-            'swift': 'file-code',
-            'kt': 'file-code',
-            'dart': 'file-code',
-            'lua': 'file-code',
-            'pl': 'file-code',
-            'r': 'file-code',
-            'sql': 'file-code',
-            'sh': 'file-code',
-            'bash': 'file-code',
-            'zsh': 'file-code',
-            'ps1': 'file-code',
-            'bat': 'file-code',
-            'cmd': 'file-code',
-
-            // 字体文件
-            'ttf': 'type',
-            'otf': 'type',
-            'woff': 'type',
-            'woff2': 'type',
-            'eot': 'type',
-
-            // 电子书
-            'epub': 'book',
-            'mobi': 'book',
-            'azw3': 'book',
-
-            // 数据库
-            'db': 'database',
-            'sqlite': 'database',
-            'mdb': 'database',
-
-            // 配置文件
-            'ini': 'settings',
-            'cfg': 'settings',
-            'conf': 'settings',
-            'toml': 'settings',
-
-            // 其他特殊类型
-            'strm': 'link',
-            'url': 'link',
-            'webloc': 'link',
-            'exe': 'binary',
-            'msi': 'binary',
-            'dll': 'binary',
-            'app': 'binary',
-            'apk': 'binary',
-            'deb': 'package',
-            'rpm': 'package',
-            'pkg': 'package'
-        };
-
-        return iconMap[ext] || 'file'; // 默认返回文件图标
+        return ICON_MAP[ext] || 'file'; // 默认返回文件图标
     }
 
     /**
@@ -322,38 +174,24 @@ export class WebDAVFileService {
     }
 
     /**
-     * 判断文件是否为文本文件
-     * @param filename - 文件名
-     * @returns 如果是文本文件返回 true，否则返回 false
-     */
-    private isTextFile(filename: string): boolean {
-        const textExtensions = ['.md', '.txt', '.json', '.xml', '.html', '.css', '.js', '.ts'];
-        return textExtensions.some(ext => filename.toLowerCase().endsWith(ext));
-    }
-
-    /**
      * 处理已存在文件的命名冲突
      * 如果文件已存在，会在文件名后添加时间戳
      * @param filePath - 原始文件路径
-     * @param filename - 文件名
-     * @returns 处理后的文件路径
      */
-    private async handleExistingFile(filePath: string, filename: string): Promise<string> {
+    private async handleExistingFile(filePath: string): Promise<string> {
         const exists = await this.app.vault.adapter.exists(filePath);
+        if (!exists) return filePath;
 
-        // 如果文件不存在，直接返回原路径
-        if (!exists) {
-            return filePath;
-        }
+        const lastSlashIndex = filePath.lastIndexOf('/');
+        const dir = lastSlashIndex !== -1 ? filePath.substring(0, lastSlashIndex + 1) : '';
+        const filename = lastSlashIndex !== -1 ? filePath.substring(lastSlashIndex + 1) : filePath;
 
-        // 提取文件名和扩展名
-        const name = filename.substring(0, filename.lastIndexOf('.'));
-        const ext = filename.substring(filename.lastIndexOf('.'));
+        const lastDotIndex = filename.lastIndexOf('.');
+        const name = lastDotIndex === -1 ? filename : filename.substring(0, lastDotIndex);
+        const ext = lastDotIndex === -1 ? '' : filename.substring(lastDotIndex);
+
         const timestamp = new Date().getTime();
-
-        // 生成新路径：在原文件名后添加时间戳
-        const newPath = filePath.substring(0, filePath.lastIndexOf('/'));
-        return `${newPath}/${name}_${timestamp}${ext}`;
+        return `${dir}${name}_${timestamp}${ext}`;
     }
 
     /**
@@ -364,17 +202,19 @@ export class WebDAVFileService {
      */
     private fallbackDownload(blob: Blob, filename: string): void {
         // 创建对象 URL
+        const doc = activeDocument;
+
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = doc.createElement('a');
         a.href = url;
         a.download = filename;
 
         // 触发下载
-        document.body.appendChild(a);
+        doc.body.appendChild(a);
         a.click();
-        document.body.removeChild(a);
+        doc.body.removeChild(a);
 
-        // 清理对象 URL
+        // 清理
         URL.revokeObjectURL(url);
     }
 }

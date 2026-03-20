@@ -1,6 +1,7 @@
 import {createClient, FileStat} from 'webdav';
 import {IWebDAVClient, WebDAVServer} from './types';
 import {SecretStorage} from 'obsidian';
+import {i18n} from "./i18n";
 
 /**
  * WebDAV 客户端实现类
@@ -61,7 +62,7 @@ export class WebDAVClient implements IWebDAVClient {
      */
     async getDirectoryContents(path: string): Promise<FileStat[]> {
         if (!this.client) {
-            throw new Error('WebDAV client not initialized');
+            throw new Error(i18n.t.webdavClient.webdavClientNotInitialized);
         }
 
         // 获取目录内容，处理不同的返回格式
@@ -71,7 +72,7 @@ export class WebDAVClient implements IWebDAVClient {
         if (Array.isArray(result)) {
             return result;
         } else {
-            return result.data;
+            return (result as { data: FileStat[] }).data;
         }
     }
 
@@ -83,14 +84,14 @@ export class WebDAVClient implements IWebDAVClient {
      */
     async getFileContents(filePath: string): Promise<ArrayBuffer> {
         if (!this.client) {
-            throw new Error('WebDAV client not initialized');
+            throw new Error(i18n.t.webdavClient.webdavClientNotInitialized);
         }
 
         try {
             // 以二进制格式获取文件内容
             return await this.client.getFileContents(filePath, {format: 'binary', details: false}) as ArrayBuffer;
         } catch {
-            throw new Error('Failed to get file contents');
+            throw new Error(i18n.t.webdavClient.failedToGetFileContents);
         }
     }
 }

@@ -92,10 +92,8 @@ export class WebDAVExplorerService {
             this.onNotice(i18n.t.contextMenu.connectionError, true);
             return;
         }
-
         try {
             await this.fileService.downloadFile(file, this.currentServer, this.client);
-            this.onNotice(`${i18n.t.contextMenu.downloadSuccess}: ${file.basename}`, false);
         } catch {
             this.onNotice(i18n.t.contextMenu.downloadFailed, true);
         }

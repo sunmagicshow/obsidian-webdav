@@ -301,6 +301,7 @@ export class WebDAVExplorerView extends View {
             return;
         }
         this.renderFileItems(fileList, files);
+        this.setLoadingState(false);
     }
 
     /**

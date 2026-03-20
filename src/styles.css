@@ -71,6 +71,11 @@
     justify-content: center;
 }
 
+.webdav-breadcrumb-item a,
+.webdav-breadcrumb-item a:hover {
+    text-decoration: none;
+}
+
 .webdav-breadcrumb-current a,
 .webdav-breadcrumb-current {
     color: var(--text-normal) !important;
