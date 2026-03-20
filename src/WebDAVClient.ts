@@ -30,19 +30,12 @@ export class WebDAVClient implements IWebDAVClient {
         const {url, username, secretId} = this.server;
 
         // 验证必要的配置参数
-        if (!url || !username || !secretId) {
-            return false;
-        }
+        if (!url || !username || !secretId) return false;
         const password = this.secretStorage.getSecret(secretId);
-        if (!password) {
-            return false;
-        }
+        if (!password) return false;
         try {
             // 创建 WebDAV 客户端实例
-            this.client = createClient(url, {
-                username,
-                password,
-            });
+            this.client = createClient(url, {username, password,});
 
             // 测试连接：尝试获取根目录内容
             await this.client.getDirectoryContents('/');

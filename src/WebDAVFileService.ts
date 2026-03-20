@@ -44,8 +44,6 @@ export class WebDAVFileService {
                 } else {
                     await this.app.vault.adapter.writeBinary(filePath, arrayBuffer);
                 }
-
-                // downloadingMessage?.hide();
                 new Notice(`✅ ${i18n.t.contextMenu.downloadSuccess}`);
             } else {
                 new Notice(`ℹ️ ${i18n.t.contextMenu.notSupportFormat}`);

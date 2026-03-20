@@ -1,8 +1,9 @@
-import {Notice, Plugin} from 'obsidian';
+import {Notice, Plugin, debounce, Debouncer} from 'obsidian';
 import {WebDAVSettingTab} from './WebDAVSettingTab';
 import {WebDAVExplorerView} from './WebDAVExplorerView';
 import {i18n} from './i18n';
 import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
+import {WebDAVAuthManager} from './WebDAVAuthManager';
 
 /**
  * WebDAV 插件主类
@@ -10,6 +11,14 @@ import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORE
  */
 export default class WebDAVPlugin extends Plugin {
     settings: WebDAVSettings = DEFAULT_SETTINGS;
+    private authManager!: WebDAVAuthManager;
+
+    /**
+     * 使用官方导出的 Debouncer 接口定义类型
+     * T (参数列表) 为 []，V (返回值) 为 void
+     */
+    private debouncedRefresh!: Debouncer<[], void>;
+
 
     /**
      * 插件加载时的初始化操作
@@ -21,6 +30,23 @@ export default class WebDAVPlugin extends Plugin {
     async onload() {
         const savedSettings = await this.loadData() as Partial<WebDAVSettings>;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, savedSettings);
+
+
+        // 1. 初始化认证管理器（会自动应用证书放行策略）
+        this.authManager = new WebDAVAuthManager(this.app, this.manifest.id);
+        this.debouncedRefresh = debounce(() => {
+            void this.refreshAuth();
+        }, 500, true);
+        // 2. 启动时执行静默握手，激活浏览器凭据缓存
+        void this.refreshAuth();
+
+        // 3.注册事件：直接传入防抖函数
+        this.registerEvent(
+            this.app.workspace.on("layout-change", () => this.debouncedRefresh())
+        );
+        this.registerEvent(
+            this.app.workspace.on("window-open", () => this.debouncedRefresh())
+        );
 
         // 注册 WebDAV 文件浏览器视图
         this.registerView(
@@ -35,6 +61,20 @@ export default class WebDAVPlugin extends Plugin {
         this.addRibbonIcon('cloud', i18n.t.displayName, () => void this.activateView());
     }
 
+    /**
+     * 核心异步握手逻辑
+     */
+    private async refreshAuth() {
+        const servers = this.settings.servers;
+        if (!servers?.length) return;
+
+        try {
+            await Promise.allSettled(servers.map(s => this.authManager.silentHandshake(s)));
+        } catch {
+            // 静默处理
+        }
+    }
+
     // ==================== 服务器管理方法 ====================
 
     /**
@@ -42,8 +82,30 @@ export default class WebDAVPlugin extends Plugin {
      * - 关闭所有 WebDAV 视图
      */
     onunload() {
+        if (this.authManager) {
+            this.authManager.cleanup();
+        }
+        this.debouncedRefresh.cancel();
         new Notice(i18n.t.settings.unloadSuccess);
     }
+
+
+    /**
+     * 通知所有视图服务器配置已变更
+     * 触发视图重新加载服务器数据
+     */
+    public notifyServerChanged(): void {
+        // UI 刷新：立即执行
+        this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER).forEach(leaf => {
+            if (leaf.view instanceof WebDAVExplorerView) {
+                leaf.view.onServerChanged();
+            }
+        });
+
+        // 网络握手：进入防抖队列
+        this.debouncedRefresh();
+    }
+
 
     /**
      * 获取当前活动的服务器配置
@@ -132,14 +194,4 @@ export default class WebDAVPlugin extends Plugin {
     }
 
 
-    /**
-     * 通知所有视图服务器配置已变更
-     * 触发视图重新加载服务器数据
-     */
-    public notifyServerChanged(): void {
-        // 获取所有 WebDAV 视图
-        this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER).forEach(leaf => {
-            (leaf.view as WebDAVExplorerView).onServerChanged();
-        });
-    }
 }
