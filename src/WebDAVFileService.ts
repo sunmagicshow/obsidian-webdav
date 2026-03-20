@@ -48,11 +48,10 @@ export class WebDAVFileService {
                 // downloadingMessage?.hide();
                 new Notice(`✅ ${i18n.t.contextMenu.downloadSuccess}`);
             } else {
+                new Notice(`ℹ️ ${i18n.t.contextMenu.notSupportFormat}`);
                 const arrayBuffer = await client.getFileContents(file.filename);
                 const blob = new Blob([arrayBuffer], {type: 'application/octet-stream'});
                 this.fallbackDownload(blob, file.basename);
-
-                new Notice(`ℹ️ ${i18n.t.contextMenu.notSupportFormat}`);
             }
         } catch (e) {
             downloadingMessage?.hide();
