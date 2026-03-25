@@ -21,9 +21,6 @@ importers:
       '@eslint/js':
         specifier: ^9.39.1
         version: 9.39.4
-      '@types/electron':
-        specifier: ^1.4.38
-        version: 1.6.12
       '@types/node':
         specifier: ^25.3.3
         version: 25.5.0
@@ -375,10 +372,6 @@ packages:
 
   '@types/codemirror@5.60.8':
     resolution: {integrity: sha512-VjFgDF/eB+Aklcy15TtOTLQeMjTo07k7KAjql8OK5Dirr7a6sJY4T1uVBDuTVG9VEmn1uUsohOpYnVfgC6/jyw==}
-
-  '@types/electron@1.6.12':
-    resolution: {integrity: sha512-NIJokDkGv9h+MStCL1IuiL1FOHYVkszoWeNxJtSI5dcEKRGbX83JcVYNAgk019qOQgJkHtz9WdP0CDXvrArrGg==}
-    deprecated: This is a stub types definition. electron provides its own type definitions, so you do not need this installed.
 
   '@types/eslint-scope@3.7.7':
     resolution: {integrity: sha512-MzMFlSLBqNF2gcHWO0G1vP/YQyfvrxZ0bF+u7mzUdZ1/xK4A4sru+nraZz5i3iEIk1l1uyicaDVTB4QbbEkAYg==}
@@ -2474,12 +2467,6 @@ snapshots:
   '@types/codemirror@5.60.8':
     dependencies:
       '@types/tern': 0.23.9
-
-  '@types/electron@1.6.12':
-    dependencies:
-      electron: 41.0.4
-    transitivePeerDependencies:
-      - supports-color
 
   '@types/eslint-scope@3.7.7':
     dependencies:
