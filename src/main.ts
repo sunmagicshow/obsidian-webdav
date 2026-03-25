@@ -1,215 +1,269 @@
-import {Notice, Plugin, debounce, Debouncer} from 'obsidian';
+import {Notice, Plugin, MarkdownPostProcessor, requestUrl} from 'obsidian';
 import {WebDAVSettingTab} from './WebDAVSettingTab';
 import {WebDAVExplorerView} from './WebDAVExplorerView';
 import {i18n} from './i18n';
 import {WebDAVSettings, DEFAULT_SETTINGS, WebDAVServer, VIEW_TYPE_WEBDAV_EXPLORER} from './types';
-import {WebDAVAuthManager} from './WebDAVAuthManager';
 
-/**
- * WebDAV 插件主类
- * 负责插件生命周期管理、服务器配置和视图控制
- */
 export default class WebDAVPlugin extends Plugin {
+    // 插件配置
     settings: WebDAVSettings = DEFAULT_SETTINGS;
-    private authManager!: WebDAVAuthManager;
 
-    /**
-     * 使用官方导出的 Debouncer 接口定义类型
-     * T (参数列表) 为 []，V (返回值) 为 void
-     */
-    private debouncedRefresh!: Debouncer<[], void>;
+    // 缓存：图片URL → blobUrl，避免重复下载
+    private readonly blobCache = new Map<string, string>();
+    // 存储每个服务器的CORS检测结果：服务器ID → 是否支持CORS
+    private serverCorsMap = new Map<string, boolean>();
 
-
-    /**
-     * 插件加载时的初始化操作
-     * - 加载设置
-     * - 注册视图
-     * - 添加设置面板
-     * - 添加 ribbon 图标
-     */
-    async onload() {
-        // --- 1. 加载并合并设置 ---
+    async onload(): Promise<void> {
+        // 1. 加载插件配置
         const savedSettings = await this.loadData() as Partial<WebDAVSettings>;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, savedSettings);
 
-        // --- 2. 数据迁移逻辑：补全缺失的 ID ---
+        // 2. 配置迁移
         await this.migrateSettings();
 
-        // --- 3. 初始化认证管理器 ---
-        this.authManager = new WebDAVAuthManager(this.app, this.manifest.id);
-        this.debouncedRefresh = debounce(() => {
-            void this.refreshAuth();
-        }, 500, true);
-
-        void this.refreshAuth();
-
-        // 3.注册事件：直接传入防抖函数
-        this.registerEvent(
-            this.app.workspace.on("layout-change", () => this.debouncedRefresh())
-        );
-        this.registerEvent(
-            this.app.workspace.on("window-open", () => this.debouncedRefresh())
-        );
-
-        // 注册 WebDAV 文件浏览器视图
+        // 3. 注册插件视图
         this.registerView(
             VIEW_TYPE_WEBDAV_EXPLORER,
             (leaf) => new WebDAVExplorerView(leaf, this),
         );
 
-        // 添加设置面板
+        // 4. 注册设置页 + 左侧图标
         this.addSettingTab(new WebDAVSettingTab(this.app, this));
-
-        // 添加 ribbon 图标，点击打开 WebDAV 浏览器
         this.addRibbonIcon('cloud', i18n.t.displayName, () => void this.activateView());
+
+        // 5. 启动时检测所有服务器的CORS状态
+        await this.detectAllServerCORS();
+
+        // 6. 注册markdown处理器：渲染图片时自动处理
+        const processor: MarkdownPostProcessor = (el) => {
+            el.querySelectorAll('img').forEach((img) => {
+                void this.handleSmartImage(img);
+            });
+        };
+        this.registerMarkdownPostProcessor(processor);
+
+        // 7. 监听DOM新增图片的自动处理
+        this.registerDOMMonitorForImages();
+    }
+
+    /**
+     * 检测所有服务器是否支持CORS
+     * 支持CORS：直接浏览器加载
+     * 不支持CORS：走插件授权+blob模式
+     */
+    private async detectAllServerCORS(): Promise<void> {
+        const servers = this.settings.servers ?? [];
+        if (servers.length === 0) return;
+
+        // 遍历所有服务器，逐个检测
+        for (const server of servers) {
+            try {
+                const url = server.url;
+                if (!url || !server.id) continue;
+
+                // 发送跨域预检请求（标准CORS检测方式）
+                await requestUrl({
+                    url: url,
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'GET',
+                        Origin: 'app://obsidian.md'
+                    },
+                });
+
+                // 根据返回码自动判断是否支持CORS
+                this.serverCorsMap.set(server.id, true);
+            } catch {
+                this.serverCorsMap.set(server.id, false)
+            }
+        }
     }
 
 
     /**
-     * 数据迁移：为旧版本服务器配置补全 ID
+     * 1. 支持CORS → 不处理，直接加载
+     * 2. 不支持CORS → 用账号密码获取图片，转blob显示
      */
-    private async migrateSettings() {
-        let hasChanges = false;
-        const {servers} = this.settings;
+    private async handleSmartImage(img: HTMLImageElement): Promise<void> {
+        const src = img.src;
 
-        if (!servers || servers.length === 0) return;
+        // 过滤无效图片、已处理过的图片、blob/data图片
+        if (!src || img.dataset.webdav) return;
+        if (src.startsWith('blob:') || src.startsWith('data:')) return;
 
-        servers.forEach((server) => {
-            // 如果服务器没有 id，则根据当前时间戳生成一个
-            if (!server.id) {
-                server.id = `server_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-                hasChanges = true;
+        // 获取当前选中的WebDAV服务器
+        const server = this.getCurrentServer();
+        if (!server || !server.id) return;
 
-                // 如果这个被补全 ID 的服务器恰好是当前正在使用的服务器
-                // 同步更新 currentServerId 以确保 ID 匹配逻辑生效
-                if (server.name === this.settings.currentServerName && !this.settings.currentServerId) {
-                    this.settings.currentServerId = server.id;
-                }
+        // 关键：判断图片是否属于当前服务器,只处理当前服务器的图片，不干扰其他图片
+        try {
+            const imgHost = new URL(src).host;
+            const serverHost = new URL(server.url).host;
+            if (imgHost !== serverHost) return;
+        } catch {
+            return;
+        }
+
+        // 获取当前服务器的CORS状态
+        const isCorsSupported = this.serverCorsMap.get(server.id) ?? false;
+
+        // 标记已处理过的图片
+        img.dataset.webdavProcessed = 'true';
+
+        // 支持CORS → 直接返回，不做任何处理
+        if (isCorsSupported) return;
+
+        // 不支持CORS → 走授权+blob模式
+        if (!server.username || !server.secretId) return;
+        const password = this.app.secretStorage.getSecret(server.secretId) ?? '';
+        if (!password) return;
+
+        // 构造Basic Auth授权头
+        const auth = `Basic ${btoa(`${server.username}:${password}`)}`;
+
+        // 缓存命中：直接使用已生成的blob
+        if (this.blobCache.has(src)) {
+            img.src = this.blobCache.get(src)!;
+            return;
+        }
+
+        // 缓存未命中：用授权方式下载图片
+        try {
+            const res = await requestUrl({
+                url: src,
+                headers: {Authorization: auth},
+            });
+
+            // 转成blobUrl并赋值给img
+            const contentType = res.headers['content-type'] ?? 'image/png';
+            const blob = new Blob([res.arrayBuffer], {type: contentType});
+            const blobUrl = URL.createObjectURL(blob);
+
+            // 存入缓存
+            this.blobCache.set(src, blobUrl);
+            img.src = blobUrl;
+        } catch {
+            // 加载失败不做处理
+        }
+    }
+
+    /**
+     * DOM监视器：动态插入的图片（如滚动加载）也能自动处理
+     */
+    private registerDOMMonitorForImages(): void {
+        const observer = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                m.addedNodes.forEach((node) => {
+                    if (node instanceof HTMLImageElement) {
+                        void this.handleSmartImage(node);
+                    }
+                    if (node instanceof HTMLElement) {
+                        node.querySelectorAll('img').forEach((img) => {
+                            void this.handleSmartImage(img);
+                        });
+                    }
+                });
             }
         });
-        // 只有在数据真正发生变化时才保存，避免多余的 IO 操作
-        if (hasChanges) {
-            await this.saveData(this.settings);
-        }
+
+        observer.observe(document.body, {childList: true, subtree: true});
+        this.register(() => observer.disconnect());
     }
 
-
     /**
-     * 核心异步握手逻辑
-     */
-    private async refreshAuth() {
-        const servers = this.settings.servers;
-        if (!servers?.length) return;
-
-        try {
-            await Promise.allSettled(servers.map(s => this.authManager.silentHandshake(s)));
-        } catch {
-            // 静默处理
-        }
-    }
-
-    // ==================== 服务器管理方法 ====================
-
-    /**
-     * 插件卸载时的清理操作
-     * - 关闭所有 WebDAV 视图
-     */
-    onunload() {
-        if (this.authManager) {
-            this.authManager.cleanup();
-        }
-        this.debouncedRefresh.cancel();
-        new Notice(i18n.t.settings.unloadSuccess);
-    }
-
-
-    /**
-     * 通知所有视图服务器配置已变更
-     * 触发视图重新加载服务器数据
+     * 服务器配置改变时：清空缓存并重新检测CORS
      */
     public notifyServerChanged(): void {
-        // UI 刷新：立即执行
+        // 刷新文件视图
         this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER).forEach(leaf => {
             if (leaf.view instanceof WebDAVExplorerView) {
                 leaf.view.onServerChanged();
             }
         });
 
-        // 网络握手：进入防抖队列
-        this.debouncedRefresh();
-    }
+        // 清空所有状态
+        this.serverCorsMap.clear();
+        this.blobCache.forEach(url => URL.revokeObjectURL(url));
+        this.blobCache.clear();
 
-
-    /**
-     * 获取当前活动的服务器配置
-     * @returns 当前服务器或默认服务器，如果没有则返回 null
-     */
-    getCurrentServer(): WebDAVServer | null {
-        const {servers, currentServerId, currentServerName} = this.settings;
-
-        // 优先通过 ID 查找
-        if (currentServerId) {
-            return servers.find(s => s.id === currentServerId) || null;
-        }
-        // 兼容老版本通过 Name 查找
-        return servers.find(s => s.name === currentServerName) || servers[0] || null;
+        // 重新检测CORS
+        void this.detectAllServerCORS();
     }
 
     /**
-     * 获取默认服务器配置
-     * @returns 标记为默认的服务器或第一个服务器，如果没有则返回 null
+     * 插件卸载：释放blob内存
      */
-    getDefaultServer(): WebDAVServer | null {
+    onunload(): void {
+        this.blobCache.forEach(url => URL.revokeObjectURL(url));
+        this.blobCache.clear();
+        new Notice(i18n.t.settings.unloadSuccess);
+    }
+
+    /**
+     * 配置迁移：给没有ID的服务器自动生成ID
+     */
+    private async migrateSettings(): Promise<void> {
+        let hasChanges = false;
         const {servers} = this.settings;
 
-        // 默认服务器查找逻辑
-        return servers.find(s => s.isDefault) || servers[0] || null;
+        if (!servers || servers.length === 0) return;
+
+        servers.forEach(server => {
+            if (!server.id) {
+                server.id = `server_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+                hasChanges = true;
+
+                if (server.name === this.settings.currentServerName && !this.settings.currentServerId) {
+                    this.settings.currentServerId = server.id;
+                }
+            }
+        });
+
+        if (hasChanges) {
+            await this.saveData(this.settings);
+        }
     }
 
-    /**
-     * 获取所有服务器配置列表
-     * @returns 服务器配置数组
-     */
+    // ======================
+    // 工具方法：获取当前服务器
+    // ======================
+    getCurrentServer(): WebDAVServer | null {
+        const {servers, currentServerId, currentServerName} = this.settings;
+        if (currentServerId) {
+            return servers.find(s => s.id === currentServerId) ?? null;
+        }
+        return servers.find(s => s.name === currentServerName) ?? servers[0] ?? null;
+    }
+
+    getDefaultServer(): WebDAVServer | null {
+        const {servers} = this.settings;
+        return servers.find(s => s.isDefault) ?? servers[0] ?? null;
+    }
+
     getServers(): WebDAVServer[] {
         return this.settings.servers;
     }
-    // ==================== 设置管理方法 ====================
 
-    /**
-     * 激活并显示 WebDAV 浏览器视图
-     * - 使用默认服务器
-     * - 复用已存在的视图或创建新视图
-     * - 在右侧面板显示
-     */
-    async activateView() {
+    // 打开插件视图
+    async activateView(): Promise<void> {
         const {workspace} = this.app;
-
-        // 检查是否存在默认服务器配置
         const defaultServer = this.getDefaultServer();
+
         if (!defaultServer) {
             new Notice(i18n.t.settings.serverListEmpty);
             return;
         }
 
-        // 设置当前服务器为默认服务器并保存设置
         this.settings.currentServerName = defaultServer.name;
         await this.saveData(this.settings);
 
-        // 查找已存在的 WebDAV 视图
         let existingLeaf = workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER)[0];
-
         if (existingLeaf) {
-            // 显示已存在的视图并强制刷新
             await workspace.revealLeaf(existingLeaf);
-            if (existingLeaf.view instanceof WebDAVExplorerView) {
-                existingLeaf.view.onunload();
-                await existingLeaf.view.onOpen();
-            }
             return;
         }
 
-        // 创建新的视图
-        const targetLeaf = workspace.getRightLeaf(false) || workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
+        const targetLeaf = workspace.getRightLeaf(false) ?? workspace.createLeafBySplit(workspace.getLeaf(), 'vertical');
         await targetLeaf.setViewState({type: VIEW_TYPE_WEBDAV_EXPLORER, active: true});
         await workspace.revealLeaf(targetLeaf);
     }

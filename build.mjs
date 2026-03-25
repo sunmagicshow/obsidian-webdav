@@ -3,6 +3,7 @@
 import { build } from 'esbuild';
 import { readFileSync, writeFileSync } from 'fs';
 
+
 // 构建主文件
 await build({
   entryPoints: ['src/main.ts'],
