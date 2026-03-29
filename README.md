@@ -14,20 +14,24 @@ A WebDAV plugin for Obsidian that enables seamless file management through WebDA
 - **🎬 Media Preview** - Preview videos and images directly within Obsidian (Videos require [Media Extended](obsidian://show-plugin?id=media-extended) plugin)
 - **🖱️ Double-click to Open** - Double-click any file to open it in Obsidian's built-in browser
 - **⬇️ File Download** - Directly download Obsidian-supported formats to your vault; unsupported formats use the system downloader
+- **📤 Right-click Upload** - Right-click on files or folders and select "Upload to WebDAV" to upload to the current browsing path
+- **🔄 Duplicate File Handling** - Automatically detects duplicate files during upload, offering options to overwrite, rename, or cancel
+- **📁 Folder Batch Upload** - Supports recursive upload of entire folders and their contents, automatically calculates upload results
 
 ### ⚙️ Settings Example
 ![setting.png](asset/setting.png)
 
 ### 📋 Requirements
 
-#### 🔌 Media Extended Plugin
-For video playback functionality, please install the [Media Extended plugin](https://github.com/aidenlx/media-extended). This enables smooth video preview within Obsidian.
 
 #### 🌐 CORS Configuration
-⚠️ **Important**: Your WebDAV server must support CORS (Cross-Origin Resource Sharing) for real-time file preview. Without proper CORS configuration, you may encounter preview errors. Ensure your server includes the following headers:
+💡 **Recommended**: For the best real-time file preview experience, it is recommended that your WebDAV server supports CORS (Cross-Origin Resource Sharing). If your server does not support CORS, the plugin will automatically use an alternative approach (authorization + blob mode) to handle file previews.
+
+**Recommended CORS header configuration**:
 - `Access-Control-Allow-Origin: *` 
-- `Access-Control-Allow-Methods: GET, PROPFIND, OPTIONS`
-- `Access-Control-Allow-Headers: *`
+- `Access-Control-Allow-Methods: GET, PROPFIND, OPTIONS, PUT, DELETE`
+- `Access-Control-Allow-Headers: Authorization, Content-Type, *`
+- `Access-Control-Expose-Headers: Content-Length, Content-Type`
 
 ### 🎮 Usage Demo
 ![demo.gif](asset/demo.gif)

@@ -4,6 +4,12 @@ import obsidianmd from "eslint-plugin-obsidianmd";
 import globals from "globals";
 
 export default defineConfig([
+    {
+        ignores: [
+            "node_modules/**",      // 忽略 node_modules 目录
+            "dist/**",              // 忽略构建输出目录
+        ]
+    },
     ...obsidianmd.configs.recommended,
     {
         files: ["**/*.ts"],

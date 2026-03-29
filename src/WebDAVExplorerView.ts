@@ -1,4 +1,15 @@
-import {WorkspaceLeaf, View, Notice, Menu, MarkdownView, setIcon, debounce, ButtonComponent} from 'obsidian';
+import {
+    WorkspaceLeaf,
+    View,
+    Notice,
+    Menu,
+    Modal,
+    MarkdownView,
+    setIcon,
+    debounce,
+    ButtonComponent,
+    TAbstractFile
+} from 'obsidian';
 import {FileStat} from 'webdav';
 import WebDAVPlugin from './main';
 import {VIEW_TYPE_WEBDAV_EXPLORER} from './types';
@@ -14,11 +25,17 @@ export class WebDAVExplorerView extends View {
     // ==================== 依赖注入 ====================
     plugin: WebDAVPlugin;
     fileService: WebDAVFileService;
-    private explorerService: WebDAVExplorerService;
+    private readonly explorerService: WebDAVExplorerService;
 
     // ==================== 视图状态 ====================
-    private selectedItem: HTMLElement | null = null;
+    private selectedItems: Set<HTMLElement> = new Set();
+    private selectedFiles: Map<HTMLElement, FileStat> = new Map();
     private refreshButton: HTMLElement | null = null;
+
+    // ==================== 事件处理器 ====================
+    private dragOverHandler: ((evt: DragEvent) => void) | null = null;
+    private dragLeaveHandler: ((evt: DragEvent) => void) | null = null;
+    private dropHandler: ((evt: DragEvent) => void) | null = null;
 
     // ==================== DOM 元素引用 ====================
     private sortButton: HTMLElement | null = null;
@@ -68,7 +85,26 @@ export class WebDAVExplorerView extends View {
     }
 
     onunload() {
-        this.selectedItem = null;
+        this.selectedItems.clear();
+        this.selectedFiles.clear();
+
+        // 清理事件处理器
+        if (this.contentEl) {
+            if (this.dragOverHandler) {
+                this.contentEl.removeEventListener('dragover', this.dragOverHandler);
+            }
+            if (this.dragLeaveHandler) {
+                this.contentEl.removeEventListener('dragleave', this.dragLeaveHandler);
+            }
+            if (this.dropHandler) {
+                this.contentEl.removeEventListener('drop', this.dropHandler);
+            }
+        }
+
+        this.dragOverHandler = null;
+        this.dragLeaveHandler = null;
+        this.dropHandler = null;
+
         this.containerEl?.empty();
     }
 
@@ -161,7 +197,40 @@ export class WebDAVExplorerView extends View {
     private buildLayout(): void {
         this.headerEl = this.containerEl.createEl('div', {cls: 'webdav-header'});
         this.contentEl = this.containerEl.createEl('div', {cls: 'webdav-content'});
+        this.setupDragAndDropOnContent();
         this.buildHeaderContent();
+    }
+
+    /**
+     * 在 contentEl 上设置拖放事件
+     */
+    private setupDragAndDropOnContent(): void {
+        if (!this.contentEl) return;
+
+        // 移除旧的事件监听器（如果存在）
+        if (this.dragOverHandler) {
+            this.contentEl.removeEventListener('dragover', this.dragOverHandler);
+        }
+        if (this.dragLeaveHandler) {
+            this.contentEl.removeEventListener('dragleave', this.dragLeaveHandler);
+        }
+        if (this.dropHandler) {
+            this.contentEl.removeEventListener('drop', this.dropHandler);
+        }
+
+        // 创建新的事件处理器并存储到类属性
+        this.dragOverHandler = (evt: DragEvent) => this.handleDragOver(evt);
+        this.dragLeaveHandler = (evt: DragEvent) => this.handleDragLeave(evt);
+        this.dropHandler = (evt: DragEvent) => {
+            void this.handleDrop(evt).catch(() => {
+                // 忽略处理错误
+            });
+        };
+
+        // 添加新的事件监听器
+        this.contentEl.addEventListener('dragover', this.dragOverHandler);
+        this.contentEl.addEventListener('dragleave', this.dragLeaveHandler);
+        this.contentEl.addEventListener('drop', this.dropHandler);
     }
 
     /**
@@ -286,7 +355,125 @@ export class WebDAVExplorerView extends View {
      */
     private getFileListContainer(): HTMLElement {
         this.contentEl?.empty();
+        // 重新设置拖放事件，因为 empty() 会清除所有子元素和事件
+        this.setupDragAndDropOnContent();
         return this.contentEl!.createEl('div', {cls: 'webdav-file-list'});
+    }
+
+    /**
+     * 处理拖拽悬停
+     */
+    private handleDragOver(evt: DragEvent): void {
+        evt.preventDefault();
+        evt.stopPropagation();
+
+        // 检查是否是从本视图内部拖动的文件
+        // 本视图内部拖动的文件不会包含 obsidian:// URI
+        const filesData = evt.dataTransfer?.getData('text/plain');
+        const hasObsidianUri = filesData ? filesData.split('\n').some(p => p.trim().startsWith('obsidian://')) : false;
+
+        // 只有从外部拖拽进来的文件才显示拖入效果
+        if (hasObsidianUri) {
+            const fileList = evt.currentTarget as HTMLElement;
+            fileList.addClass('webdav-drag-over');
+        }
+    }
+
+    /**
+     * 处理拖拽离开
+     */
+    private handleDragLeave(evt: DragEvent): void {
+        evt.preventDefault();
+        evt.stopPropagation();
+        const fileList = evt.currentTarget as HTMLElement;
+        fileList.removeClass('webdav-drag-over');
+    }
+
+    /**
+     * 处理文件拖放上传
+     */
+    private async handleDrop(evt: DragEvent): Promise<void> {
+        evt.preventDefault();
+        evt.stopPropagation();
+
+        const targetEl = evt.currentTarget as HTMLElement;
+        targetEl.removeClass('webdav-drag-over');
+
+        // 尝试从 dataTransfer 获取文件路径
+        let filesData = evt.dataTransfer?.getData('text/plain');
+
+        // 如果没有获取到，尝试从 files 获取
+        if (!filesData && evt.dataTransfer?.files && evt.dataTransfer.files.length > 0) {
+            // 处理系统文件拖拽
+            this.showNotice(i18n.t.view.dragFromLeft, true);
+            return;
+        }
+
+        if (!filesData) {
+            return;
+        }
+
+        // 检查是否是从本视图内部拖动的文件
+        // 本视图内部拖动的文件不会包含 obsidian:// URI
+        const hasObsidianUri = filesData.split('\n').some(p => p.trim().startsWith('obsidian://'));
+
+        // 如果没有 obsidian:// URI，说明是在视图内部拖动的文件，不处理
+        if (!hasObsidianUri) {
+            return;
+        }
+
+        // 解析文件路径（Obsidian 拖拽时会传递 obsidian:// URI）
+        const paths = filesData.split('\n').filter(p => p.trim());
+        if (paths.length === 0) {
+            return;
+        }
+
+        // 获取对应的 TAbstractFile 对象
+        const items: TAbstractFile[] = [];
+        for (const path of paths) {
+            const trimmedPath = path.trim();
+
+            // 解析 obsidian:// URI
+            let filePath = trimmedPath;
+            if (trimmedPath.startsWith('obsidian://')) {
+                try {
+                    const url = new URL(trimmedPath);
+                    const fileParam = url.searchParams.get('file');
+                    if (fileParam) {
+                        filePath = decodeURIComponent(fileParam);
+                    }
+                } catch {
+                    // 忽略解析错误
+                }
+            }
+
+            // 先尝试直接路径匹配
+            let file: TAbstractFile | null = this.app.vault.getAbstractFileByPath(filePath);
+            
+            // 如果没找到，尝试搜索文件名（考虑扩展名）
+            if (!file) {
+                const files = this.app.vault.getFiles();
+                // 尝试直接匹配文件名，再尝试匹配不带扩展名的文件名
+                file = files.find(f => f.name === filePath) || 
+                       files.find(f => f.name.replace(/\.[^/.]+$/, '') === filePath) || 
+                       null;
+            }
+
+            if (file) {
+                items.push(file);
+            }
+        }
+
+        if (items.length === 0) {
+            this.showNotice(i18n.t.view.noValidFiles, true);
+            return;
+        }
+
+        // 去重，避免重复处理
+        const uniqueItems = Array.from(new Set(items));
+
+        // 处理上传
+        await this.handleUploadWithConflictCheck(uniqueItems);
     }
 
     /**
@@ -340,19 +527,21 @@ export class WebDAVExplorerView extends View {
         const iconSpan = item.createSpan({cls: 'webdav-icon'});
         item.createSpan({cls: 'webdav-file-name', text: file.basename});
 
+        // 存储文件数据到元素
+        (item as HTMLElement & { fileData?: FileStat }).fileData = file;
+
         if (file.type === 'directory') {
             setIcon(iconSpan, 'folder');
             item.addClass('webdav-file-item-folder');
-            item.onclick = async () => {
-                this.selectItem(item);
-                await this.navigateToDirectory(file.filename);
-            };
+            item.onclick = (evt) => this.handleItemClick(evt, item, file);
+            item.ondblclick = async () => await this.navigateToDirectory(file.filename);
+            item.oncontextmenu = (evt) => this.showMultiSelectContextMenu(evt);
         } else {
             const fileIcon = this.fileService.getFileIcon(file.basename);
             setIcon(iconSpan, fileIcon);
-            item.onclick = () => this.selectItem(item);
+            item.onclick = (evt) => this.handleItemClick(evt, item, file);
             item.ondblclick = () => this.explorerService.openFileWithWeb(file.filename);
-            item.oncontextmenu = (evt) => this.showFileContextMenu(evt, file);
+            item.oncontextmenu = (evt) => this.showMultiSelectContextMenu(evt);
             item.setAttr('draggable', 'true');
             item.ondragstart = (event) => this.handleFileDragStart(event, file);
         }
@@ -518,25 +707,291 @@ export class WebDAVExplorerView extends View {
     }
 
     /**
-     * 显示文件上下文菜单
+     * 显示多选上下文菜单
      */
-    private showFileContextMenu(event: MouseEvent, file: FileStat): void {
+    private showMultiSelectContextMenu(event: MouseEvent): void {
         event.preventDefault();
         const menu = new Menu();
+        const selectedFiles = this.getSelectedFiles();
 
-        menu.addItem(item => {
-            item.setTitle(i18n.t.contextMenu.copyUrl)
-                .setIcon('link')
-                .onClick(() => this.explorerService.copyFileUrl(file));
-        });
+        if (selectedFiles.length === 0) {
+            // 尝试获取右键点击的文件
+            const target = event.target as HTMLElement;
+            const item = target.closest('.webdav-file-item') as HTMLElement;
+            if (item) {
+                const fileData = (item as HTMLElement & { fileData?: FileStat }).fileData;
+                if (fileData) {
+                    this.addItemToSelection(item, fileData);
+                    selectedFiles.push(fileData);
+                }
+            }
+        }
+
+        if (selectedFiles.length === 1) {
+            // 单选时显示完整菜单
+            this.showSingleItemContextMenu(menu, selectedFiles[0]);
+        } else if (selectedFiles.length > 1) {
+            // 多选时只显示下载和删除
+            this.showMultiItemContextMenu(menu, selectedFiles);
+        }
+
+        menu.showAtMouseEvent(event);
+    }
+
+    /**
+     * 显示单文件上下文菜单
+     */
+    private showSingleItemContextMenu(menu: Menu, file: FileStat): void {
+        const isDirectory = file.type === 'directory';
+
+        if (!isDirectory) {
+            menu.addItem(item => {
+                item.setTitle(i18n.t.contextMenu.copyUrl)
+                    .setIcon('link')
+                    .onClick(() => this.explorerService.copyFileUrl(file));
+            });
+        }
 
         menu.addItem(item => {
             item.setTitle(i18n.t.contextMenu.download)
                 .setIcon('download')
-                .onClick(() => this.explorerService.downloadFile(file));
+                .onClick(() => void this.downloadWithConflictDialog(file));
         });
 
-        menu.showAtMouseEvent(event);
+        menu.addSeparator();
+
+        menu.addItem(item => {
+            item.setTitle(i18n.t.contextMenu.delete)
+                .setIcon('trash')
+                .onClick(() => void this.confirmAndDeleteRemote(file));
+        });
+    }
+
+    /**
+     * 显示多文件上下文菜单（只显示下载和删除）
+     */
+    private showMultiItemContextMenu(menu: Menu, files: FileStat[]): void {
+        menu.addItem(item => {
+            item.setTitle(`${i18n.t.contextMenu.download} (${files.length})`)
+                .setIcon('download')
+                .onClick(() => void this.downloadMultipleFiles(files));
+        });
+
+        menu.addSeparator();
+
+        menu.addItem(item => {
+            item.setTitle(`${i18n.t.contextMenu.delete} (${files.length})`)
+                .setIcon('trash')
+                .onClick(() => void this.confirmAndDeleteRemote(files));
+        });
+    }
+
+    private async downloadWithConflictDialog(file: FileStat): Promise<void> {
+        const server = this.plugin.getCurrentServer();
+        if (!server) {
+            this.showNotice(i18n.t.view.selectServer, true);
+            return;
+        }
+        const plan = await this.fileService.planDownload(file, server);
+        if (plan.conflict) {
+            const choice = await this.showDownloadConflictModal(file.basename);
+            if (choice === 'cancel') return;
+            await this.explorerService.downloadRemoteItem(file, choice);
+        } else {
+            await this.explorerService.downloadRemoteItem(file, 'new');
+        }
+    }
+
+    private async showDownloadConflictModal(itemName: string): Promise<'overwrite' | 'rename' | 'cancel'> {
+        return new Promise((resolve) => {
+            const modal = new Modal(this.app);
+            modal.titleEl.setText(i18n.t.contextMenu.downloadConflictTitle);
+            modal.contentEl.createEl('p', {
+                text: i18n.t.contextMenu.downloadConflictMessage.replace('{name}', itemName)
+            });
+            const buttonContainer = modal.contentEl.createDiv({cls: 'webdav-modal-button-container'});
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.contextMenu.overwrite).setWarning().onClick(() => {
+                modal.close();
+                resolve('overwrite');
+            });
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.contextMenu.renameDownload).onClick(() => {
+                modal.close();
+                resolve('rename');
+            });
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.settings.cancel).onClick(() => {
+                modal.close();
+                resolve('cancel');
+            });
+            modal.open();
+        });
+    }
+
+    /**
+     * 显示上传冲突对话框
+     */
+    async showUploadConflictModal(itemName: string): Promise<'overwrite' | 'rename' | 'cancel'> {
+        return new Promise((resolve) => {
+            const modal = new Modal(this.app);
+            modal.titleEl.setText(i18n.t.contextMenu.uploadConflictTitle);
+            modal.contentEl.createEl('p', {
+                text: i18n.t.contextMenu.uploadConflictMessage.replace('{name}', itemName)
+            });
+            const buttonContainer = modal.contentEl.createDiv({cls: 'webdav-modal-button-container'});
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.contextMenu.overwriteUpload).setWarning().onClick(() => {
+                modal.close();
+                resolve('overwrite');
+            });
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.contextMenu.renameUpload).onClick(() => {
+                modal.close();
+                resolve('rename');
+            });
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.settings.cancel).onClick(() => {
+                modal.close();
+                resolve('cancel');
+            });
+            modal.open();
+        });
+    }
+
+    /**
+     * 检查是否有选中的文件需要上传并处理冲突
+     */
+    async handleUploadWithConflictCheck(items: TAbstractFile[]): Promise<void> {
+        const server = this.plugin.getCurrentServer();
+        if (!server) {
+            this.showNotice(i18n.t.view.selectServer, true);
+            return;
+        }
+
+        // 确保客户端已初始化
+        if (!this.explorerService['client']) {
+            const success = await this.explorerService.initializeClient();
+            if (!success) {
+                this.showNotice(i18n.t.view.connectionFailed, true);
+                return;
+            }
+        }
+
+        // 检查是否有任何文件存在冲突
+        let hasConflict = false;
+        const currentPath = this.explorerService.getCurrentRemotePath();
+
+        for (const item of items) {
+            const remotePath = `${currentPath}/${item.name}`;
+            const exists = await this.explorerService.checkRemotePathExists(remotePath);
+            if (exists) {
+                hasConflict = true;
+                break;
+            }
+        }
+
+        if (hasConflict) {
+            // 找到第一个冲突的文件
+            let firstConflictItem = items[0];
+            for (const item of items) {
+                const remotePath = `${currentPath}/${item.name}`;
+                const exists = await this.explorerService.checkRemotePathExists(remotePath);
+                if (exists) {
+                    firstConflictItem = item;
+                    break;
+                }
+            }
+
+            const choice = await this.showUploadConflictModal(firstConflictItem.name);
+            if (choice === 'cancel') return;
+            await this.explorerService.uploadItems(items, choice);
+        } else {
+            // 没有冲突，直接上传
+            await this.explorerService.uploadItems(items, 'overwrite');
+        }
+    }
+
+    /**
+     * 确认并删除远程文件（支持单文件和多文件）
+     */
+    private async confirmAndDeleteRemote(files: FileStat | FileStat[]): Promise<void> {
+        const fileArray = Array.isArray(files) ? files : [files];
+        const isSingle = fileArray.length === 1;
+
+        const confirmed = await new Promise<boolean>((resolve) => {
+            const modal = new Modal(this.app);
+            modal.titleEl.setText(i18n.t.contextMenu.delete);
+            modal.contentEl.createEl('p', {
+                text: isSingle
+                    ? i18n.t.contextMenu.confirmDeleteRemote.replace('{name}', fileArray[0].basename)
+                    : i18n.t.contextMenu.confirmDeleteMultiple.replace('{count}', fileArray.length.toString())
+            });
+            const buttonContainer = modal.contentEl.createDiv({cls: 'webdav-modal-button-container'});
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.settings.confirm).setWarning().onClick(() => {
+                modal.close();
+                resolve(true);
+            });
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.settings.cancel).onClick(() => {
+                modal.close();
+                resolve(false);
+            });
+            modal.open();
+        });
+        if (!confirmed) return;
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const file of fileArray) {
+            const success = await this.explorerService.deleteRemoteItem(file);
+            if (success) {
+                successCount++;
+            } else {
+                failCount++;
+            }
+        }
+
+        if (successCount > 0) {
+            this.showNotice(i18n.t.view.deleteCompleted
+                .replace('{success}', successCount.toString())
+                .replace('{failed}', failCount > 0 ? i18n.t.contextMenu.failedCount.replace('{count}', failCount.toString()) : ''), false);
+            // 清除选择状态，避免与左侧文件目录树的选择状态冲突
+            this.clearSelection();
+        } else if (failCount > 0) {
+            this.showNotice(i18n.t.view.deleteFailed.replace('{count}', failCount.toString()), true);
+        }
+    }
+
+    /**
+     * 下载多个文件
+     */
+    private async downloadMultipleFiles(files: FileStat[]): Promise<void> {
+        const server = this.plugin.getCurrentServer();
+        if (!server) {
+            this.showNotice(i18n.t.view.selectServer, true);
+            return;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const file of files) {
+            try {
+                const plan = await this.fileService.planDownload(file, server);
+                if (plan.conflict) {
+                    // 多文件下载时，默认使用重命名策略避免冲突
+                    await this.explorerService.downloadRemoteItem(file, 'rename');
+                } else {
+                    await this.explorerService.downloadRemoteItem(file, 'new');
+                }
+                successCount++;
+            } catch {
+                failCount++;
+            }
+        }
+
+        if (successCount > 0) {
+            this.showNotice(i18n.t.view.downloadCompleted
+                .replace('{success}', successCount.toString())
+                .replace('{failed}', failCount > 0 ? i18n.t.contextMenu.failedCount.replace('{count}', failCount.toString()) : ''), false);
+        } else if (failCount > 0) {
+            this.showNotice(i18n.t.view.downloadFailed.replace('{count}', failCount.toString()), true);
+        }
     }
 
     // ==================== 拖拽操作 ====================
@@ -577,14 +1032,106 @@ export class WebDAVExplorerView extends View {
         }, {once: true});
     }
 
+    // ==================== 多选管理方法 ====================
+    /**
+     * 处理文件项点击（支持多选）
+     */
+    private handleItemClick(evt: MouseEvent, item: HTMLElement, file: FileStat): void {
+        if (evt.ctrlKey || evt.metaKey) {
+            // Ctrl/Cmd + 点击：切换选中状态
+            this.toggleItemSelection(item, file);
+        } else if (evt.shiftKey && this.selectedItems.size > 0) {
+            // Shift + 点击：范围选择
+            this.rangeSelectItems(item);
+        } else {
+            // 普通点击：单选
+            this.clearSelection();
+            this.addItemToSelection(item, file);
+        }
+    }
+
+    /**
+     * 切换项的选中状态
+     */
+    private toggleItemSelection(item: HTMLElement, file: FileStat): void {
+        if (this.selectedItems.has(item)) {
+            this.selectedItems.delete(item);
+            this.selectedFiles.delete(item);
+            item.removeClass('webdav-file-item-selected');
+        } else {
+            this.selectedItems.add(item);
+            this.selectedFiles.set(item, file);
+            item.addClass('webdav-file-item-selected');
+        }
+    }
+
+    /**
+     * 添加项到选中集合
+     */
+    private addItemToSelection(item: HTMLElement, file: FileStat): void {
+        this.selectedItems.add(item);
+        this.selectedFiles.set(item, file);
+        item.addClass('webdav-file-item-selected');
+    }
+
+    /**
+     * 清除所有选中
+     */
+    private clearSelection(): void {
+        this.selectedItems.forEach(item => {
+            item.removeClass('webdav-file-item-selected');
+        });
+        this.selectedItems.clear();
+        this.selectedFiles.clear();
+    }
+
+    /**
+     * 范围选择（Shift+点击）
+     */
+    private rangeSelectItems(targetItem: HTMLElement): void {
+        const fileList = this.contentEl?.querySelector('.webdav-file-list');
+        if (!fileList) return;
+
+        const allItems = Array.from(fileList.querySelectorAll('.webdav-file-item'));
+        const lastSelectedItem = Array.from(this.selectedItems).pop();
+        if (!lastSelectedItem) return;
+
+        const lastIndex = allItems.indexOf(lastSelectedItem);
+        const targetIndex = allItems.indexOf(targetItem);
+
+        if (lastIndex === -1 || targetIndex === -1) return;
+
+        const start = Math.min(lastIndex, targetIndex);
+        const end = Math.max(lastIndex, targetIndex);
+
+        for (let i = start; i <= end; i++) {
+            const item = allItems[i];
+            if (item instanceof HTMLElement) {
+                const fileData = (item as HTMLElement & { fileData?: FileStat }).fileData;
+                if (fileData && !this.selectedItems.has(item)) {
+                    this.addItemToSelection(item, fileData);
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取当前选中的文件列表
+     */
+    private getSelectedFiles(): FileStat[] {
+        return Array.from(this.selectedFiles.values());
+    }
+
     // ==================== 状态管理方法 ====================
     /**
-     * 选择文件项
+     * 选择文件项（兼容旧代码）
      */
     private selectItem(item: HTMLElement): void {
-        this.selectedItem?.removeClass('webdav-file-item-selected');
-        this.selectedItem = item;
-        item.addClass('webdav-file-item-selected');
+        this.clearSelection();
+        const fileData = (item as HTMLElement & { fileData?: FileStat }).fileData;
+        if (fileData) {
+            this.addItemToSelection(item, fileData);
+        }
     }
 
     /**

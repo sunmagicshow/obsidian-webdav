@@ -1,4 +1,4 @@
-import {App, Notice} from 'obsidian';
+import {App, Notice, TAbstractFile, TFile, TFolder} from 'obsidian';
 import {FileStat} from 'webdav';
 import {WebDAVServer} from './types';
 import {WebDAVClient} from './WebDAVClient';
@@ -14,39 +14,79 @@ export class WebDAVFileService {
     }
 
     /**
-     * 从 WebDAV 服务器下载文件到本地
-     * @param file - WebDAV 文件信息
-     * @param server - WebDAV 服务器配置
-     * @param client - WebDAV 客户端实例
+     * 计算下载目标根路径（相对仓库根的路径），并检测是否与已有文件或文件夹重名
      */
-    async downloadFile(file: FileStat, server: WebDAVServer, client: WebDAVClient): Promise<void> {
-        const ext = file.basename.split('.').pop()?.toLowerCase() || '';
+    async planDownload(file: FileStat, server: WebDAVServer): Promise<{ conflict: boolean; targetPath: string }> {
+        const downloadDir = await this.getDownloadDirectory(server);
+        const targetPath = downloadDir === '' ? file.basename : `${downloadDir}/${file.basename}`;
+        const conflict = await this.app.vault.adapter.exists(targetPath);
+        return {conflict, targetPath};
+    }
 
-        // 1. 预先判断分流类型
+    /**
+     * 下载远程文件或文件夹到本地仓库
+     */
+    async downloadRemoteItem(
+        file: FileStat,
+        server: WebDAVServer,
+        client: WebDAVClient,
+        mode: 'new' | 'overwrite' | 'rename'
+    ): Promise<void> {
+        const downloadDir = await this.getDownloadDirectory(server);
+        let rootPath = downloadDir === '' ? file.basename : `${downloadDir}/${file.basename}`;
+
+        if (mode === 'overwrite') {
+            await this.deleteVaultIfExists(rootPath);
+        } else if (mode === 'rename') {
+            rootPath = this.applyTimestampSuffix(rootPath);
+        }
+
+        if (file.type === 'directory') {
+            let folderNotice: Notice | null = null;
+            try {
+                folderNotice = new Notice(`⬇️ ${i18n.t.contextMenu.downloadingFolder}`);
+                await this.downloadDirectoryRecursive(file.filename, rootPath, client);
+                new Notice(`✅ ${i18n.t.contextMenu.downloadSuccess}`);
+            } finally {
+                folderNotice?.hide();
+            }
+        } else {
+            await this.downloadSingleFileContents(file, client, rootPath, false);
+        }
+    }
+
+    private async downloadSingleFileContents(
+        file: FileStat,
+        client: WebDAVClient,
+        vaultPath: string,
+        quiet: boolean
+    ): Promise<void> {
+        const ext = file.basename.split('.').pop()?.toLowerCase() || '';
         const isText = SUPPORTED_TEXT_EXTS.has(ext);
         const isBinary = SUPPORTED_BINARY_EXTS.has(ext);
         const isObsidianSupported = isText || isBinary;
 
-        // 2. 只有 Obsidian 支持的格式才显示“下载中”提示
         let downloadingMessage: Notice | null = null;
-        if (isObsidianSupported) {
+        if (!quiet && isObsidianSupported) {
             downloadingMessage = new Notice(`⬇️${i18n.t.contextMenu.downloading}`);
         }
 
         try {
             if (isObsidianSupported) {
                 const arrayBuffer = await client.getFileContents(file.filename);
-                const filePath = await this.prepareFilePath(file.basename, server);
-
                 if (isText) {
                     const decoder = new TextDecoder('utf-8');
-                    await this.app.vault.adapter.write(filePath, decoder.decode(arrayBuffer));
+                    await this.app.vault.adapter.write(vaultPath, decoder.decode(arrayBuffer));
                 } else {
-                    await this.app.vault.adapter.writeBinary(filePath, arrayBuffer);
+                    await this.app.vault.adapter.writeBinary(vaultPath, arrayBuffer);
                 }
-                new Notice(`✅ ${i18n.t.contextMenu.downloadSuccess}`);
+                if (!quiet) {
+                    new Notice(`✅ ${i18n.t.contextMenu.downloadSuccess}`);
+                }
             } else {
-                new Notice(`ℹ️ ${i18n.t.contextMenu.notSupportFormat}`);
+                if (!quiet) {
+                    new Notice(`ℹ️ ${i18n.t.contextMenu.notSupportFormat}`);
+                }
                 const arrayBuffer = await client.getFileContents(file.filename);
                 const blob = new Blob([arrayBuffer], {type: 'application/octet-stream'});
                 this.fallbackDownload(blob, file.basename);
@@ -57,128 +97,29 @@ export class WebDAVFileService {
         }
     }
 
-    private async prepareFilePath(basename: string, server: WebDAVServer): Promise<string> {
-        const downloadDir = await this.getDownloadDirectory(server);
-        const filePath = downloadDir === '' ? basename : `${downloadDir}/${basename}`;
-        return await this.handleExistingFile(filePath);
-    }
+    private async downloadDirectoryRecursive(
+        remotePath: string,
+        vaultFolderPath: string,
+        client: WebDAVClient
+    ): Promise<void> {
+        if (!(await this.app.vault.adapter.exists(vaultFolderPath))) {
+            await this.app.vault.createFolder(vaultFolderPath);
+        }
 
-    /**
-     * 根据文件扩展名获取对应的 Obsidian 图标
-     * @param filename - 文件名
-     * @returns 对应的 Obsidian 图标名称
-     */
-    getFileIcon(filename: string): string {
-        const ext = filename.split('.').pop()?.toLowerCase() || '';
+        const items = await client.getDirectoryContents(remotePath);
+        for (const item of items) {
+            if (item.basename === '.' || item.basename === '..') continue;
 
-        return ICON_MAP[ext] || 'file'; // 默认返回文件图标
-    }
-
-    /**
-     * 标准化文件路径，确保路径格式正确
-     * @param path - 原始路径
-     * @param rootPath - 根路径，默认为 '/'
-     * @returns 标准化后的路径
-     */
-    normalizePath(path: string, rootPath: string = '/'): string {
-        let normalizedPath = path;
-
-        // 处理空路径、根路径等特殊情况
-        if (path === '' || path === '/' || path === rootPath) {
-            normalizedPath = rootPath;
-        } else {
-            // 确保路径以根路径开头
-            if (!path.startsWith(rootPath)) {
-                normalizedPath = rootPath === '/' ? `/${path.replace(/^\//, '')}` : `${rootPath}/${path.replace(/^\//, '')}`;
+            const childVaultPath = `${vaultFolderPath}/${item.basename}`;
+            if (item.type === 'directory') {
+                await this.downloadDirectoryRecursive(item.filename, childVaultPath, client);
+            } else {
+                await this.downloadSingleFileContents(item, client, childVaultPath, true);
             }
-            // 移除多余的斜杠
-            normalizedPath = normalizedPath.replace(/\/+/g, '/');
         }
-
-        // 移除末尾的斜杠（除非是根路径）
-        if (normalizedPath !== '/' && normalizedPath.endsWith('/')) {
-            normalizedPath = normalizedPath.slice(0, -1);
-        }
-
-        // 最终确认路径以根路径开头
-        if (!normalizedPath.startsWith(rootPath)) {
-            normalizedPath = rootPath;
-        }
-
-        return normalizedPath;
     }
 
-
-    /**
-     * 获取文件下载目录路径
-     * @param server - WebDAV 服务器配置
-     * @returns 下载目录路径
-     */
-    private async getDownloadDirectory(server: WebDAVServer): Promise<string> {
-        // 如果设置了自定义下载路径
-        if (server.downloadPath && server.downloadPath.trim() !== '') {
-            let customPath = server.downloadPath.trim();
-
-            // 标准化路径：移除开头和结尾的斜杠，除非是根目录
-            customPath = this.normalizeDownloadPath(customPath);
-
-            // 如果设置为根目录或空字符串，则使用根目录
-            if (customPath === '/' || customPath === '') {
-                return '';
-            }
-
-            // 检查目录是否存在，不存在则创建
-            const dirExists = await this.app.vault.adapter.exists(customPath);
-            if (!dirExists) {
-                await this.app.vault.createFolder(customPath);
-            }
-
-            return customPath;
-        }
-        // 如果未设置 downloadPath，使用根目录
-        return '';
-    }
-
-    /**
-     * 标准化下载路径
-     * 确保所有格式的路径都统一为相同的格式
-     * @param path - 原始路径
-     * @returns 标准化后的路径
-     */
-    private normalizeDownloadPath(path: string): string {
-        if (!path || path.trim() === '') {
-            return '';
-        }
-
-        let normalizedPath = path.trim();
-
-        // 移除开头的斜杠（除非是根目录）
-        if (normalizedPath.startsWith('/')) {
-            normalizedPath = normalizedPath.substring(1);
-        }
-
-        // 移除结尾的斜杠
-        if (normalizedPath.endsWith('/')) {
-            normalizedPath = normalizedPath.substring(0, normalizedPath.length - 1);
-        }
-
-        // 如果处理后为空，说明是根目录
-        if (normalizedPath === '') {
-            return '';
-        }
-
-        return normalizedPath;
-    }
-
-    /**
-     * 处理已存在文件的命名冲突
-     * 如果文件已存在，会在文件名后添加时间戳
-     * @param filePath - 原始文件路径
-     */
-    private async handleExistingFile(filePath: string): Promise<string> {
-        const exists = await this.app.vault.adapter.exists(filePath);
-        if (!exists) return filePath;
-
+    private applyTimestampSuffix(filePath: string): string {
         const lastSlashIndex = filePath.lastIndexOf('/');
         const dir = lastSlashIndex !== -1 ? filePath.substring(0, lastSlashIndex + 1) : '';
         const filename = lastSlashIndex !== -1 ? filePath.substring(lastSlashIndex + 1) : filePath;
@@ -191,27 +132,204 @@ export class WebDAVFileService {
         return `${dir}${name}_${timestamp}${ext}`;
     }
 
-    /**
-     * 备用下载方法
-     * 当适配器不支持 writeBinary 时，使用浏览器原生下载
-     * @param blob - 文件数据的 Blob 对象
-     * @param filename - 文件名
-     */
-    private fallbackDownload(blob: Blob, filename: string): void {
-        // 创建对象 URL
-        const doc = activeDocument;
+    private async deleteVaultIfExists(path: string): Promise<void> {
+        const abstract = this.app.vault.getAbstractFileByPath(path);
+        if (abstract) await this.deleteAbstractRecursive(abstract);
+    }
 
+    private async deleteAbstractRecursive(file: TAbstractFile): Promise<void> {
+        if (file instanceof TFolder) {
+            for (const child of [...file.children]) {
+                await this.deleteAbstractRecursive(child);
+            }
+        }
+        await this.app.fileManager.trashFile(file);
+    }
+
+    /**
+     * 根据文件扩展名获取对应的 Obsidian 图标
+     */
+    getFileIcon(filename: string): string {
+        const ext = filename.split('.').pop()?.toLowerCase() || '';
+        return ICON_MAP[ext] || 'file';
+    }
+
+    normalizePath(path: string, rootPath: string = '/'): string {
+        let normalizedPath = path;
+
+        if (path === '' || path === '/' || path === rootPath) {
+            normalizedPath = rootPath;
+        } else {
+            if (!path.startsWith(rootPath)) {
+                normalizedPath = rootPath === '/' ? `/${path.replace(/^\//, '')}` : `${rootPath}/${path.replace(/^\//, '')}`;
+            }
+            normalizedPath = normalizedPath.replace(/\/+/g, '/');
+        }
+
+        if (normalizedPath !== '/' && normalizedPath.endsWith('/')) {
+            normalizedPath = normalizedPath.slice(0, -1);
+        }
+
+        if (!normalizedPath.startsWith(rootPath)) {
+            normalizedPath = rootPath;
+        }
+
+        return normalizedPath;
+    }
+
+    private async getDownloadDirectory(server: WebDAVServer): Promise<string> {
+        if (server.downloadPath && server.downloadPath.trim() !== '') {
+            let customPath = server.downloadPath.trim();
+            customPath = this.normalizeDownloadPath(customPath);
+
+            if (customPath === '/' || customPath === '') {
+                return '';
+            }
+
+            const dirExists = await this.app.vault.adapter.exists(customPath);
+            if (!dirExists) {
+                await this.app.vault.createFolder(customPath);
+            }
+
+            return customPath;
+        }
+        return '';
+    }
+
+    private normalizeDownloadPath(path: string): string {
+        if (!path || path.trim() === '') {
+            return '';
+        }
+
+        let normalizedPath = path.trim();
+
+        if (normalizedPath.startsWith('/')) {
+            normalizedPath = normalizedPath.substring(1);
+        }
+
+        if (normalizedPath.endsWith('/')) {
+            normalizedPath = normalizedPath.substring(0, normalizedPath.length - 1);
+        }
+
+        if (normalizedPath === '') {
+            return '';
+        }
+
+        return normalizedPath;
+    }
+
+    private fallbackDownload(blob: Blob, filename: string): void {
+        const doc = activeDocument;
         const url = URL.createObjectURL(blob);
         const a = doc.createElement('a');
         a.href = url;
         a.download = filename;
-
-        // 触发下载
         doc.body.appendChild(a);
         a.click();
         doc.body.removeChild(a);
-
-        // 清理
         URL.revokeObjectURL(url);
+    }
+
+    // ==================== 上传相关方法 ====================
+
+    /**
+     * 检查远程路径是否存在
+     */
+    async checkRemotePathExists(remotePath: string, client: WebDAVClient): Promise<boolean> {
+        try {
+            const parentPath = remotePath.substring(0, remotePath.lastIndexOf('/')) || '/';
+            const items = await client.getDirectoryContents(parentPath);
+            const fileName = remotePath.split('/').pop() || '';
+            return items.some(item => item.basename === fileName);
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * 上传单个文件到WebDAV
+     */
+    async uploadFile(
+        file: TFile,
+        remotePath: string,
+        client: WebDAVClient,
+        mode: 'overwrite' | 'rename'
+    ): Promise<void> {
+        let targetPath = remotePath;
+
+        if (mode === 'rename') {
+            targetPath = await this.getUniqueRemotePath(remotePath, client);
+        }
+
+        const content = await this.app.vault.readBinary(file);
+        await client.uploadFile(targetPath, content);
+    }
+
+    /**
+     * 上传文件夹到WebDAV
+     */
+    async uploadFolder(
+        folder: TFolder,
+        remoteParentPath: string,
+        client: WebDAVClient,
+        mode: 'overwrite' | 'rename'
+    ): Promise<void> {
+        let targetFolderPath = `${remoteParentPath}/${folder.name}`;
+
+        if (mode === 'rename') {
+            targetFolderPath = await this.getUniqueRemoteFolderPath(targetFolderPath, client);
+        }
+
+        // 创建远程文件夹
+        try {
+            await client.createDirectory(targetFolderPath);
+        } catch {
+            // 文件夹可能已存在，继续
+        }
+
+        // 递归上传文件夹内容
+        for (const child of folder.children) {
+            if (child instanceof TFile) {
+                const remoteFilePath = `${targetFolderPath}/${child.name}`;
+                await this.uploadFile(child, remoteFilePath, client, mode);
+            } else if (child instanceof TFolder) {
+                await this.uploadFolder(child, targetFolderPath, client, mode);
+            }
+        }
+    }
+
+    /**
+     * 获取唯一的远程文件路径（添加时间戳后缀）
+     */
+    private async getUniqueRemotePath(remotePath: string, client: WebDAVClient): Promise<string> {
+        if (!(await this.checkRemotePathExists(remotePath, client))) {
+            return remotePath;
+        }
+
+        const lastSlashIndex = remotePath.lastIndexOf('/');
+        const dir = lastSlashIndex !== -1 ? remotePath.substring(0, lastSlashIndex) : '';
+        const filename = lastSlashIndex !== -1 ? remotePath.substring(lastSlashIndex + 1) : remotePath;
+
+        const lastDotIndex = filename.lastIndexOf('.');
+        const name = lastDotIndex === -1 ? filename : filename.substring(0, lastDotIndex);
+        const ext = lastDotIndex === -1 ? '' : filename.substring(lastDotIndex);
+
+        const timestamp = new Date().getTime();
+        return `${dir}/${name}_${timestamp}${ext}`;
+    }
+
+    /**
+     * 获取唯一的远程文件夹路径
+     */
+    private async getUniqueRemoteFolderPath(remotePath: string, client: WebDAVClient): Promise<string> {
+        try {
+            await client.getDirectoryContents(remotePath);
+            // 如果能获取到内容，说明文件夹存在，需要重命名
+            const timestamp = new Date().getTime();
+            return `${remotePath}_${timestamp}`;
+        } catch {
+            // 文件夹不存在，可以直接使用
+            return remotePath;
+        }
     }
 }

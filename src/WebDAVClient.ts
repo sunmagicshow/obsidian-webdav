@@ -87,4 +87,54 @@ export class WebDAVClient implements IWebDAVClient {
             throw new Error(i18n.t.webdavClient.failedToGetFileContents);
         }
     }
+
+    /**
+     * 删除远程文件或目录（WebDAV DELETE）
+     */
+    async deleteFile(remotePath: string): Promise<void> {
+        if (!this.client) {
+            throw new Error(i18n.t.webdavClient.webdavClientNotInitialized);
+        }
+        await this.client.deleteFile(remotePath);
+    }
+
+    /**
+     * 上传文件到WebDAV服务器
+     */
+    async uploadFile(remotePath: string, content: ArrayBuffer): Promise<void> {
+        if (!this.client) {
+            throw new Error(i18n.t.webdavClient.webdavClientNotInitialized);
+        }
+        await this.client.putFileContents(remotePath, content);
+    }
+
+    /**
+     * 检查WebDAV写入权限
+     */
+    async checkWritePermission(path: string = '/'): Promise<boolean> {
+        if (!this.client) {
+            return false;
+        }
+        try {
+            // 尝试在指定目录创建临时文件来测试写入权限
+            const testFileName = '.webdav_write_test_' + Date.now();
+            const testPath = path === '/' ? `/${testFileName}` : `${path}/${testFileName}`;
+            const testContent = new ArrayBuffer(1);
+            await this.client.putFileContents(testPath, testContent);
+            await this.client.deleteFile(testPath);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * 创建远程目录
+     */
+    async createDirectory(remotePath: string): Promise<void> {
+        if (!this.client) {
+            throw new Error(i18n.t.webdavClient.webdavClientNotInitialized);
+        }
+        await this.client.createDirectory(remotePath);
+    }
 }

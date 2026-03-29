@@ -89,6 +89,12 @@ export interface LangPack {
         sortByDateDesc: string;
         selectServer: string;
         switchSuccess: string;
+        dragFromLeft: string;
+        noValidFiles: string;
+        deleteCompleted: string;
+        deleteFailed: string;
+        downloadCompleted: string;
+        downloadFailed: string;
     };
     webdavClient: {
         webdavClientNotInitialized: string;
@@ -104,6 +110,26 @@ export interface LangPack {
         downloadSuccess: string;
         downloadFailed: string;
         connectionError: string;
+        delete: string;
+        confirmDeleteRemote: string;
+        confirmDeleteMultiple: string;
+        deleteSuccess: string;
+        deleteFailed: string;
+        downloadingFolder: string;
+        downloadConflictTitle: string;
+        downloadConflictMessage: string;
+        overwrite: string;
+        renameDownload: string;
+        uploadToWebDAV: string;
+        uploading: string;
+        uploadSuccess: string;
+        uploadFailed: string;
+        uploadConflictTitle: string;
+        uploadConflictMessage: string;
+        overwriteUpload: string;
+        renameUpload: string;
+        noWritePermission: string;
+        failedCount: string;
     };
 }
 
@@ -199,6 +225,12 @@ const zh: LangPack = {
         sortByDateDesc: '日期（新-旧）',
         selectServer: '选择服务器',
         switchSuccess: '切换成功',
+        dragFromLeft: '请从左侧文件列表拖拽 Obsidian 文件',
+        noValidFiles: '未找到有效的文件',
+        deleteCompleted: '删除完成: {success} 个成功{failed}',
+        deleteFailed: '删除失败: {count} 个文件',
+        downloadCompleted: '下载完成: {success} 个成功{failed}',
+        downloadFailed: '下载失败: {count} 个文件',
     },
     webdavClient: {
         webdavClientNotInitialized: 'WebDAV 客户端未初始化',
@@ -214,6 +246,26 @@ const zh: LangPack = {
         downloadSuccess: '下载成功',
         downloadFailed: '下载失败',
         connectionError: '连接错误',
+        delete: '删除',
+        confirmDeleteRemote: '确定要删除「{name}」吗？此操作无法撤销。',
+        confirmDeleteMultiple: '确定要删除选中的 {count} 个项目吗？此操作无法撤销。',
+        deleteSuccess: '已删除',
+        deleteFailed: '删除失败',
+        downloadingFolder: '正在下载文件夹…',
+        failedCount: ', {count} 个失败',
+        downloadConflictTitle: '下载位置冲突',
+        downloadConflictMessage: '目标位置已存在「{name}」（文件或文件夹）。请选择处理方式。',
+        overwrite: '覆盖',
+        renameDownload: '重命名',
+        uploadToWebDAV: '上传到 WebDAV',
+        uploading: '正在上传',
+        uploadSuccess: '上传成功',
+        uploadFailed: '上传失败',
+        uploadConflictTitle: '上传冲突',
+        uploadConflictMessage: '目标位置已存在「{name}」。请选择处理方式。',
+        overwriteUpload: '覆盖',
+        renameUpload: '重命名',
+        noWritePermission: 'WebDAV 服务器没有写入权限，请联系管理员',
     }
 };
 
@@ -308,6 +360,12 @@ const en: LangPack = {
         sortByDateDesc: 'Date (New-Old)',
         selectServer: 'Select server',
         switchSuccess: 'Switch success',
+        dragFromLeft: 'Please drag Obsidian files from the left file list',
+        noValidFiles: 'No valid files found',
+        deleteCompleted: 'Delete completed: {success} success{failed}',
+        deleteFailed: 'Delete failed: {count} files',
+        downloadCompleted: 'Download completed: {success} success{failed}',
+        downloadFailed: 'Download failed: {count} files',
     },
     webdavClient: {
         webdavClientNotInitialized: 'WebDAV client not initialized',
@@ -323,6 +381,26 @@ const en: LangPack = {
         downloadSuccess: 'Download success',
         downloadFailed: 'Download failed',
         connectionError: 'Connection error',
+        delete: 'Delete',
+        confirmDeleteRemote: 'Delete "{name}"? This cannot be undone.',
+        confirmDeleteMultiple: 'Delete {count} selected items? This cannot be undone.',
+        deleteSuccess: 'Deleted',
+        deleteFailed: 'Delete failed',
+        downloadingFolder: 'Downloading folder…',
+        failedCount: ', {count} failed',
+        downloadConflictTitle: 'Download conflict',
+        downloadConflictMessage: 'A file or folder named "{name}" already exists at the destination. Choose an action.',
+        overwrite: 'Overwrite',
+        renameDownload: 'Rename',
+        uploadToWebDAV: 'Upload to WebDAV',
+        uploading: 'Uploading',
+        uploadSuccess: 'Upload success',
+        uploadFailed: 'Upload failed',
+        uploadConflictTitle: 'Upload conflict',
+        uploadConflictMessage: '"{name}" already exists at the destination. Choose an action.',
+        overwriteUpload: 'Overwrite',
+        renameUpload: 'Rename',
+        noWritePermission: 'WebDAV server has no write permission, please contact administrator',
     }
 };
 

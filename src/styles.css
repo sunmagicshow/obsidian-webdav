@@ -182,3 +182,15 @@
 .webdav-text-field, .webdav-keychain-dropdown {
     width: 200px !important;
 }
+
+/* 拖拽上传样式 */
+.webdav-content {
+    min-height: 100px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.webdav-content.webdav-drag-over {
+    background-color: var(--background-modifier-hover);
+    border: 2px dashed var(--interactive-accent);
+    border-radius: var(--radius-s);
+}

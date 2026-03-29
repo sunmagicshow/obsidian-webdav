@@ -35,4 +35,8 @@ export interface IWebDAVClient {
     initialize(): Promise<boolean>;
     getDirectoryContents(path: string): Promise<FileStat[]>;
     getFileContents(filePath: string): Promise<ArrayBuffer>;
+    deleteFile(remotePath: string): Promise<void>;
+    uploadFile(remotePath: string, content: ArrayBuffer): Promise<void>;
+    checkWritePermission(path?: string): Promise<boolean>;
+    createDirectory(remotePath: string): Promise<void>;
 }

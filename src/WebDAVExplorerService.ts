@@ -3,7 +3,7 @@ import {WebDAVServer} from './types';
 import {WebDAVClient} from './WebDAVClient';
 import {WebDAVFileService} from './WebDAVFileService';
 import {i18n} from "./i18n";
-import {SecretStorage} from 'obsidian';
+import {SecretStorage, TAbstractFile, TFile, TFolder, Notice} from 'obsidian';
 
 // 配置常量
 const CONFIG = {
@@ -87,13 +87,13 @@ export class WebDAVExplorerService {
         }
     }
 
-    public async downloadFile(file: FileStat): Promise<void> {
+    public async downloadRemoteItem(file: FileStat, mode: 'new' | 'overwrite' | 'rename'): Promise<void> {
         if (!this.client || !this.currentServer) {
             this.onNotice(i18n.t.contextMenu.connectionError, true);
             return;
         }
         try {
-            await this.fileService.downloadFile(file, this.currentServer, this.client);
+            await this.fileService.downloadRemoteItem(file, this.currentServer, this.client, mode);
         } catch {
             this.onNotice(i18n.t.contextMenu.downloadFailed, true);
         }
@@ -107,6 +107,21 @@ export class WebDAVExplorerService {
             this.onNotice(i18n.t.contextMenu.urlCopied, false);
         } catch {
             this.onNotice(i18n.t.contextMenu.copyFailed, true);
+        }
+    }
+
+    public async deleteRemoteItem(file: FileStat): Promise<boolean> {
+        if (!this.client || !this.currentServer) {
+            this.onNotice(i18n.t.contextMenu.connectionError, true);
+            return false;
+        }
+        try {
+            await this.client.deleteFile(file.filename);
+            await this.listDirectory(this.currentPath);
+            return true;
+        } catch {
+            this.onNotice(i18n.t.contextMenu.deleteFailed, true);
+            return false;
         }
     }
 
@@ -321,5 +336,92 @@ export class WebDAVExplorerService {
                 }
             );
         });
+    }
+
+    // ==================== 上传相关方法 ====================
+
+    /**
+     * 检查WebDAV写入权限
+     */
+    async checkWritePermission(): Promise<boolean> {
+        if (!this.client) {
+            return false;
+        }
+        return await this.client.checkWritePermission(this.currentPath);
+    }
+
+    /**
+     * 上传本地文件/文件夹到当前WebDAV目录
+     */
+    async uploadItems(
+        items: TAbstractFile[],
+        mode: 'overwrite' | 'rename'
+    ): Promise<void> {
+        if (!this.client || !this.currentServer) {
+            this.onNotice(i18n.t.contextMenu.connectionError, true);
+            return;
+        }
+
+        // 检查写入权限
+        const hasPermission = await this.checkWritePermission();
+        if (!hasPermission) {
+            new Notice(`❌ ${i18n.t.contextMenu.noWritePermission}`, 5000);
+            return;
+        }
+
+        const currentPath = this.currentPath;
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const item of items) {
+            try {
+                if (item instanceof TFile) {
+                    const uploadingNotice = new Notice(`⬆️ ${i18n.t.contextMenu.uploading}: ${item.name}`, 0);
+                    try {
+                        const remotePath = `${currentPath}/${item.name}`;
+                        await this.fileService.uploadFile(item, remotePath, this.client, mode);
+                        successCount++;
+                    } finally {
+                        uploadingNotice.hide();
+                    }
+                } else if (item instanceof TFolder) {
+                    const uploadingNotice = new Notice(`⬆️ ${i18n.t.contextMenu.uploading}: ${item.name}/...`, 0);
+                    try {
+                        await this.fileService.uploadFolder(item, currentPath, this.client, mode);
+                        successCount++;
+                    } finally {
+                        uploadingNotice.hide();
+                    }
+                }
+            } catch {
+                this.onNotice(`${i18n.t.contextMenu.uploadFailed}: ${item.name}`, true);
+                failCount++;
+            }
+        }
+
+        // 显示上传完成通知
+        if (successCount > 0) {
+            this.onNotice(`${i18n.t.contextMenu.uploadSuccess}: ${successCount} 个成功${failCount > 0 ? `, ${failCount} 个失败` : ''}`, false);
+        }
+
+        // 刷新当前目录
+        await this.listDirectory(currentPath);
+    }
+
+    /**
+     * 检查远程路径是否存在
+     */
+    async checkRemotePathExists(remotePath: string): Promise<boolean> {
+        if (!this.client) {
+            return false;
+        }
+        return await this.fileService.checkRemotePathExists(remotePath, this.client);
+    }
+
+    /**
+     * 获取当前路径
+     */
+    getCurrentRemotePath(): string {
+        return this.currentPath;
     }
 }
