@@ -235,6 +235,9 @@ export default class WebDAVPlugin extends Plugin {
         // 监听文件菜单（多选情况）
         this.registerEvent(
             this.app.workspace.on('files-menu', (menu: Menu, files: TAbstractFile[]) => {
+                // 只允许单选，多选时不显示上传菜单
+                if (files.length !== 1) return;
+                
                 // 获取当前活动的 WebDAV 视图
                 const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER);
                 if (leaves.length === 0) return;

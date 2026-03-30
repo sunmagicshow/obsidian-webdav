@@ -14,9 +14,11 @@ A WebDAV plugin for Obsidian that enables seamless file management through WebDA
 - **🎬 Media Preview** - Preview videos and images directly within Obsidian (Videos require [Media Extended](obsidian://show-plugin?id=media-extended) plugin)
 - **🖱️ Double-click to Open** - Double-click any file to open it in Obsidian's built-in browser
 - **⬇️ File Download** - Directly download Obsidian-supported formats to your vault; unsupported formats use the system downloader
-- **📤 Right-click Upload** - Right-click on files or folders and select "Upload to WebDAV" to upload to the current browsing path
+- **📤 Right-click Upload** - Right-click on a single file or folder and select "Upload to WebDAV" to upload to the current browsing path
+- **📁 Drag & Drop Upload** - Drag a single file or folder into the WebDAV view to upload it to the current browsing path
 - **🔄 Duplicate File Handling** - Automatically detects duplicate files during upload, offering options to overwrite, rename, or cancel
 - **📁 Folder Batch Upload** - Supports recursive upload of entire folders and their contents, automatically calculates upload results
+- **✏️ File Rename** - Right-click on files or folders in the WebDAV view and select "Rename" to rename them
 
 ### ⚙️ Settings Example
 ![setting.png](asset/setting.png)

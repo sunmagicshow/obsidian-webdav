@@ -39,4 +39,5 @@ export interface IWebDAVClient {
     uploadFile(remotePath: string, content: ArrayBuffer): Promise<void>;
     checkWritePermission(path?: string): Promise<boolean>;
     createDirectory(remotePath: string): Promise<void>;
+    renameFile(oldPath: string, newPath: string): Promise<void>;
 }

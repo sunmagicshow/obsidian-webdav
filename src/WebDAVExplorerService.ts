@@ -110,6 +110,21 @@ export class WebDAVExplorerService {
         }
     }
 
+    public async copyMultipleFileUrls(files: FileStat[]): Promise<void> {
+        try {
+            if (!this.currentServer) return;
+            
+            // 生成多行URL列表，每行一个URL，以换行符结尾
+            const urls = files.map(file => this.getFileFullUrl(file.filename));
+            const urlList = urls.join('\n') + '\n';
+            
+            await navigator.clipboard.writeText(urlList);
+            this.onNotice(i18n.t.contextMenu.urlCopied, false);
+        } catch {
+            this.onNotice(i18n.t.contextMenu.copyFailed, true);
+        }
+    }
+
     public async deleteRemoteItem(file: FileStat): Promise<boolean> {
         if (!this.client || !this.currentServer) {
             this.onNotice(i18n.t.contextMenu.connectionError, true);
@@ -121,6 +136,25 @@ export class WebDAVExplorerService {
             return true;
         } catch {
             this.onNotice(i18n.t.contextMenu.deleteFailed, true);
+            return false;
+        }
+    }
+
+    public async renameRemoteItem(file: FileStat, newName: string): Promise<boolean> {
+        if (!this.client || !this.currentServer) {
+            this.onNotice(i18n.t.contextMenu.connectionError, true);
+            return false;
+        }
+        try {
+            // 构建新的文件路径
+            const directoryPath = file.filename.substring(0, file.filename.lastIndexOf('/') + 1);
+            const newFilePath = directoryPath + newName;
+            
+            // 执行重命名操作
+            await this.client.renameFile(file.filename, newFilePath);
+            return true;
+        } catch (error) {
+            this.onNotice(`重命名失败: ${(error as Error).message}`, true);
             return false;
         }
     }
@@ -371,7 +405,6 @@ export class WebDAVExplorerService {
 
         const currentPath = this.currentPath;
         let successCount = 0;
-        let failCount = 0;
 
         for (const item of items) {
             try {
@@ -395,13 +428,12 @@ export class WebDAVExplorerService {
                 }
             } catch {
                 this.onNotice(`${i18n.t.contextMenu.uploadFailed}: ${item.name}`, true);
-                failCount++;
             }
         }
 
         // 显示上传完成通知
         if (successCount > 0) {
-            this.onNotice(`${i18n.t.contextMenu.uploadSuccess}: ${successCount} 个成功${failCount > 0 ? `, ${failCount} 个失败` : ''}`, false);
+            this.onNotice(i18n.t.contextMenu.uploadSuccess, false);
         }
 
         // 刷新当前目录

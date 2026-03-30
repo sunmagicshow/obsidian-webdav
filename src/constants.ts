@@ -1,7 +1,7 @@
 /**
  * Obsidian 官方支持并能正常显示的格式
  */
-export const SUPPORTED_TEXT_EXTS = new Set(['md', 'canvas', 'json', 'base']);
+export const SUPPORTED_TEXT_EXTS = new Set(['md', 'canvas', 'base']);
 
 export const SUPPORTED_BINARY_EXTS = new Set([
     'avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp',

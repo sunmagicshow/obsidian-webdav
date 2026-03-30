@@ -278,6 +278,13 @@ export class WebDAVFileService {
 
         if (mode === 'rename') {
             targetFolderPath = await this.getUniqueRemoteFolderPath(targetFolderPath, client);
+        } else if (mode === 'overwrite') {
+            // 覆盖模式下，如果远程文件夹已存在，先删除它
+            try {
+                await client.deleteFile(targetFolderPath);
+            } catch {
+                // 文件夹可能不存在，忽略错误
+            }
         }
 
         // 创建远程文件夹

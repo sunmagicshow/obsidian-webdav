@@ -62,11 +62,33 @@ export class WebDAVClient implements IWebDAVClient {
         const result = await this.client.getDirectoryContents(path);
 
         // 根据返回类型处理结果（数组或对象包装的数组）
+        let files: FileStat[];
         if (Array.isArray(result)) {
-            return result;
+            files = result;
         } else {
-            return (result as { data: FileStat[] }).data;
+            files = (result as { data: FileStat[] }).data;
         }
+
+        // 修复文件类型：根据文件特征判断是否为文件
+        const fixedFiles = files.map(file => {
+            // 检查是否是目录
+            const isDirectory = file.type === 'directory';
+            // 检查大小是否大于0（通常文件有大小，目录大小为0）
+            const hasSize = file.size > 0;
+            
+            // 如果有大小，且被标记为目录，强制修改为文件类型
+            // 注意：不根据扩展名判断，因为目录也可能包含点号
+            if (hasSize && isDirectory) {
+                console.log('Fixing file type:', file.basename, 'from', file.type, 'to', 'file', 'size:', file.size);
+                return {
+                    ...file,
+                    type: 'file' as const
+                };
+            }
+            return file;
+        });
+
+        return fixedFiles;
     }
 
     /**
@@ -136,5 +158,15 @@ export class WebDAVClient implements IWebDAVClient {
             throw new Error(i18n.t.webdavClient.webdavClientNotInitialized);
         }
         await this.client.createDirectory(remotePath);
+    }
+
+    /**
+     * 重命名远程文件或目录
+     */
+    async renameFile(oldPath: string, newPath: string): Promise<void> {
+        if (!this.client) {
+            throw new Error(i18n.t.webdavClient.webdavClientNotInitialized);
+        }
+        await this.client.moveFile(oldPath, newPath);
     }
 }

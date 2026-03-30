@@ -8,7 +8,9 @@ import {
     setIcon,
     debounce,
     ButtonComponent,
-    TAbstractFile
+    TAbstractFile,
+    TFolder,
+    TFile
 } from 'obsidian';
 import {FileStat} from 'webdav';
 import WebDAVPlugin from './main';
@@ -365,18 +367,11 @@ export class WebDAVExplorerView extends View {
      */
     private handleDragOver(evt: DragEvent): void {
         evt.preventDefault();
-        evt.stopPropagation();
 
-        // 检查是否是从本视图内部拖动的文件
-        // 本视图内部拖动的文件不会包含 obsidian:// URI
-        const filesData = evt.dataTransfer?.getData('text/plain');
-        const hasObsidianUri = filesData ? filesData.split('\n').some(p => p.trim().startsWith('obsidian://')) : false;
-
-        // 只有从外部拖拽进来的文件才显示拖入效果
-        if (hasObsidianUri) {
-            const fileList = evt.currentTarget as HTMLElement;
-            fileList.addClass('webdav-drag-over');
-        }
+        // 直接显示拖入效果，不检查是否包含 obsidian:// URI
+        // 因为拖拽文件夹时，dataTransfer.getData可能不会立即返回数据
+        const fileList = evt.currentTarget as HTMLElement;
+        fileList.addClass('webdav-drag-over');
     }
 
     /**
@@ -413,67 +408,108 @@ export class WebDAVExplorerView extends View {
             return;
         }
 
-        // 检查是否是从本视图内部拖动的文件
-        // 本视图内部拖动的文件不会包含 obsidian:// URI
-        const hasObsidianUri = filesData.split('\n').some(p => p.trim().startsWith('obsidian://'));
-
-        // 如果没有 obsidian:// URI，说明是在视图内部拖动的文件，不处理
-        if (!hasObsidianUri) {
-            return;
-        }
-
         // 解析文件路径（Obsidian 拖拽时会传递 obsidian:// URI）
         const paths = filesData.split('\n').filter(p => p.trim());
         if (paths.length === 0) {
             return;
         }
 
-        // 获取对应的 TAbstractFile 对象
-        const items: TAbstractFile[] = [];
-        for (const path of paths) {
-            const trimmedPath = path.trim();
-
-            // 解析 obsidian:// URI
-            let filePath = trimmedPath;
-            if (trimmedPath.startsWith('obsidian://')) {
-                try {
-                    const url = new URL(trimmedPath);
-                    const fileParam = url.searchParams.get('file');
-                    if (fileParam) {
-                        filePath = decodeURIComponent(fileParam);
-                    }
-                } catch {
-                    // 忽略解析错误
-                }
-            }
-
-            // 先尝试直接路径匹配
-            let file: TAbstractFile | null = this.app.vault.getAbstractFileByPath(filePath);
-            
-            // 如果没找到，尝试搜索文件名（考虑扩展名）
-            if (!file) {
-                const files = this.app.vault.getFiles();
-                // 尝试直接匹配文件名，再尝试匹配不带扩展名的文件名
-                file = files.find(f => f.name === filePath) || 
-                       files.find(f => f.name.replace(/\.[^/.]+$/, '') === filePath) || 
-                       null;
-            }
-
-            if (file) {
-                items.push(file);
-            }
-        }
-
-        if (items.length === 0) {
-            this.showNotice(i18n.t.view.noValidFiles, true);
+        // 只允许拖拽单个文件或文件夹
+        if (paths.length !== 1) {
+            this.showNotice('只能选择单个文件或文件夹', true);
             return;
         }
 
-        // 去重，避免重复处理
-        const uniqueItems = Array.from(new Set(items));
+        // 获取对应的 TAbstractFile 对象
+        const items: TAbstractFile[] = [];
+        try {
+            for (const path of paths) {
+                const trimmedPath = path.trim();
 
-        // 处理上传
-        await this.handleUploadWithConflictCheck(uniqueItems);
+                // 解析 obsidian:// URI
+                let filePath = trimmedPath;
+                if (trimmedPath.startsWith('obsidian://')) {
+                    try {
+                        const url = new URL(trimmedPath);
+                        const fileParam = url.searchParams.get('file');
+                        if (fileParam) {
+                            filePath = decodeURIComponent(fileParam);
+                        }
+                    } catch {
+                        // 忽略解析错误
+                    }
+                }
+
+                // 尝试获取文件或文件夹对象
+                let file: TAbstractFile | null = null;
+
+                // 1. 首先尝试直接路径匹配（最准确）
+                file = this.app.vault.getAbstractFileByPath(filePath);
+                
+                // 1.1 如果没找到，尝试添加.md扩展名后匹配（处理Obsidian中md文件的特殊性）
+                if (!file && !filePath.includes('.')) {
+                    file = this.app.vault.getAbstractFileByPath(filePath + '.md');
+                }
+
+                // 2. 如果没找到，尝试遍历所有文件和文件夹进行精确匹配
+                if (!file) {
+                    const allFiles = this.app.vault.getFiles();
+                    const allFolders = this.app.vault.getAllFolders();
+
+                    // 尝试精确匹配路径
+                    file = allFiles.find(f => f.path === filePath) ||
+                        allFolders.find(f => f.path === filePath) ||
+                        // 尝试匹配带.md扩展名的文件路径
+                        allFiles.find(f => f.path === filePath + '.md') ||
+                        null;
+                }
+
+                // 3. 如果没找到，尝试匹配文件名（用于处理没有路径的情况）
+                if (!file) {
+                    const allFiles = this.app.vault.getFiles();
+                    const allFolders = this.app.vault.getAllFolders();
+
+                    // 优先匹配文件夹，再匹配文件
+                    file = allFolders.find(f => f.name === filePath) ||
+                        allFiles.find(f => f.name === filePath) ||
+                        // 尝试匹配带.md扩展名的文件
+                        allFiles.find(f => f.name === filePath + '.md') ||
+                        null;
+                }
+
+                // 4. 如果还是没找到，尝试匹配路径的最后一部分（用于处理嵌套路径）
+                if (!file && filePath.includes('/')) {
+                    const basename = filePath.split('/').pop();
+                    if (basename) {
+                        const allFiles = this.app.vault.getFiles();
+                        const allFolders = this.app.vault.getAllFolders();
+
+                        // 优先匹配文件夹，再匹配文件
+                        file = allFolders.find(f => f.name === basename) ||
+                            allFiles.find(f => f.name === basename) ||
+                            null;
+                    }
+                }
+
+                // 添加找到的文件或文件夹
+                if (file) {
+                    items.push(file);
+                }
+            }
+
+            if (items.length === 0) {
+                this.showNotice(i18n.t.view.noValidFiles, true);
+                return;
+            }
+
+            // 去重，避免重复处理
+            const uniqueItems = Array.from(new Set(items));
+
+            // 处理上传
+            await this.handleUploadWithConflictCheck(uniqueItems);
+        } catch (error) {
+            this.showNotice('Upload failed: ' + (error as Error).message, true);
+        }
     }
 
     /**
@@ -714,16 +750,35 @@ export class WebDAVExplorerView extends View {
         const menu = new Menu();
         const selectedFiles = this.getSelectedFiles();
 
-        if (selectedFiles.length === 0) {
-            // 尝试获取右键点击的文件
-            const target = event.target as HTMLElement;
-            const item = target.closest('.webdav-file-item') as HTMLElement;
-            if (item) {
-                const fileData = (item as HTMLElement & { fileData?: FileStat }).fileData;
-                if (fileData) {
+        // 尝试获取右键点击的文件
+        const target = event.target as HTMLElement;
+        const item = target.closest('.webdav-file-item') as HTMLElement;
+
+        if (item) {
+            const fileData = (item as HTMLElement & { fileData?: FileStat }).fileData;
+            if (fileData) {
+                // 检查右键点击的文件是否已经在选中列表中
+                const isAlreadySelected = Array.from(this.selectedItems).some(selectedItem => {
+                    const selectedFileData = (selectedItem as HTMLElement & { fileData?: FileStat }).fileData;
+                    return selectedFileData?.filename === fileData.filename;
+                });
+
+                if (!isAlreadySelected) {
+                    // 如果右键点击的文件未选中，清除之前的选择并只选中该文件
+                    this.clearSelection();
                     this.addItemToSelection(item, fileData);
+                    selectedFiles.length = 0;
                     selectedFiles.push(fileData);
                 }
+            }
+        }
+
+        // 如果没有获取到文件且选中列表为空，尝试从item获取
+        if (selectedFiles.length === 0 && item) {
+            const fileData = (item as HTMLElement & { fileData?: FileStat }).fileData;
+            if (fileData) {
+                this.addItemToSelection(item, fileData);
+                selectedFiles.push(fileData);
             }
         }
 
@@ -742,15 +797,12 @@ export class WebDAVExplorerView extends View {
      * 显示单文件上下文菜单
      */
     private showSingleItemContextMenu(menu: Menu, file: FileStat): void {
-        const isDirectory = file.type === 'directory';
-
-        if (!isDirectory) {
-            menu.addItem(item => {
-                item.setTitle(i18n.t.contextMenu.copyUrl)
-                    .setIcon('link')
-                    .onClick(() => this.explorerService.copyFileUrl(file));
-            });
-        }
+        // 单选时也显示复制链接（支持文件和文件夹）
+        menu.addItem(item => {
+            item.setTitle(i18n.t.contextMenu.copyUrl)
+                .setIcon('link')
+                .onClick(async () => await this.explorerService.copyFileUrl(file));
+        });
 
         menu.addItem(item => {
             item.setTitle(i18n.t.contextMenu.download)
@@ -761,6 +813,12 @@ export class WebDAVExplorerView extends View {
         menu.addSeparator();
 
         menu.addItem(item => {
+            item.setTitle('重命名')
+                .setIcon('edit')
+                .onClick(() => void this.showRenameModal(file));
+        });
+
+        menu.addItem(item => {
             item.setTitle(i18n.t.contextMenu.delete)
                 .setIcon('trash')
                 .onClick(() => void this.confirmAndDeleteRemote(file));
@@ -768,9 +826,16 @@ export class WebDAVExplorerView extends View {
     }
 
     /**
-     * 显示多文件上下文菜单（只显示下载和删除）
+     * 显示多文件上下文菜单（显示复制链接、下载和删除）
      */
     private showMultiItemContextMenu(menu: Menu, files: FileStat[]): void {
+        // 多选时显示复制链接
+        menu.addItem(item => {
+            item.setTitle(`${i18n.t.contextMenu.copyUrl} (${files.length})`)
+                .setIcon('link')
+                .onClick(async () => await this.explorerService.copyMultipleFileUrls(files));
+        });
+
         menu.addItem(item => {
             item.setTitle(`${i18n.t.contextMenu.download} (${files.length})`)
                 .setIcon('download')
@@ -827,6 +892,84 @@ export class WebDAVExplorerView extends View {
     }
 
     /**
+     * 显示重命名对话框
+     */
+    private async showRenameModal(file: FileStat): Promise<void> {
+        return new Promise((resolve) => {
+            const modal = new Modal(this.app);
+            modal.titleEl.setText('重命名');
+            
+            const form = modal.contentEl.createEl('form');
+            form.addClass('webdav-rename-form');
+            
+            form.createEl('p', {
+                text: `请输入新的名称：`
+            });
+            
+            const input = form.createEl('input', {
+                type: 'text',
+                value: file.basename
+            });
+            input.addClass('webdav-rename-input');
+            input.focus();
+            input.select();
+            
+            const buttonContainer = modal.contentEl.createDiv({cls: 'webdav-modal-button-container'});
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.settings.confirm).onClick(async () => {
+                const newName = input.value.trim();
+                if (newName && newName !== file.basename) {
+                    modal.close();
+                    await this.renameRemoteItem(file, newName);
+                } else {
+                    modal.close();
+                }
+                resolve();
+            });
+            new ButtonComponent(buttonContainer).setButtonText(i18n.t.settings.cancel).onClick(() => {
+                modal.close();
+                resolve();
+            });
+            
+            // 按Enter键确认，按Escape键取消
+            input.addEventListener('keydown', (evt) => {
+                if (evt.key === 'Enter') {
+                    const newName = input.value.trim();
+                    if (newName && newName !== file.basename) {
+                        modal.close();
+                        void this.renameRemoteItem(file, newName);
+                    } else {
+                        modal.close();
+                    }
+                    resolve();
+                } else if (evt.key === 'Escape') {
+                    modal.close();
+                    resolve();
+                }
+            });
+            
+            modal.open();
+        });
+    }
+
+    /**
+     * 重命名远程文件或文件夹
+     */
+    private async renameRemoteItem(file: FileStat, newName: string): Promise<void> {
+        try {
+            const success = await this.explorerService.renameRemoteItem(file, newName);
+            if (success) {
+                this.showNotice('重命名成功', false);
+                // 刷新当前目录
+                await this.explorerService.listDirectory(this.explorerService.getCurrentRemotePath());
+            } else {
+                this.showNotice('重命名失败', true);
+            }
+        } catch (error) {
+            this.showNotice('重命名失败: ' + (error as Error).message, true);
+        }
+    }
+
+    /**
      * 显示上传冲突对话框
      */
     async showUploadConflictModal(itemName: string): Promise<'overwrite' | 'rename' | 'cancel'> {
@@ -857,52 +1000,84 @@ export class WebDAVExplorerView extends View {
      * 检查是否有选中的文件需要上传并处理冲突
      */
     async handleUploadWithConflictCheck(items: TAbstractFile[]): Promise<void> {
-        const server = this.plugin.getCurrentServer();
-        if (!server) {
-            this.showNotice(i18n.t.view.selectServer, true);
-            return;
-        }
-
-        // 确保客户端已初始化
-        if (!this.explorerService['client']) {
-            const success = await this.explorerService.initializeClient();
-            if (!success) {
-                this.showNotice(i18n.t.view.connectionFailed, true);
+        try {
+            const server = this.plugin.getCurrentServer();
+            if (!server) {
+                this.showNotice(i18n.t.view.selectServer, true);
                 return;
             }
-        }
 
-        // 检查是否有任何文件存在冲突
-        let hasConflict = false;
-        const currentPath = this.explorerService.getCurrentRemotePath();
-
-        for (const item of items) {
-            const remotePath = `${currentPath}/${item.name}`;
-            const exists = await this.explorerService.checkRemotePathExists(remotePath);
-            if (exists) {
-                hasConflict = true;
-                break;
+            // 确保客户端已初始化
+            if (!this.explorerService['client']) {
+                const success = await this.explorerService.initializeClient();
+                if (!success) {
+                    this.showNotice(i18n.t.view.connectionFailed, true);
+                    return;
+                }
             }
-        }
 
-        if (hasConflict) {
-            // 找到第一个冲突的文件
-            let firstConflictItem = items[0];
+            // 优化：如果同时包含文件夹及其子文件，只上传文件夹
+            const optimizedItems: TAbstractFile[] = [];
+            const folderPaths = new Set<string>();
+
+            // 首先收集所有文件夹路径
             for (const item of items) {
+                if (item instanceof TFolder) {
+                    folderPaths.add(item.path);
+                }
+            }
+
+            // 然后添加文件和文件夹，确保文件不在任何选中的文件夹中
+            for (const item of items) {
+                if (item instanceof TFolder) {
+                    optimizedItems.push(item);
+                } else if (item instanceof TFile) {
+                    // 检查文件是否在任何选中的文件夹中
+                    const isInSelectedFolder = Array.from(folderPaths).some(folderPath =>
+                        item.path.startsWith(folderPath + '/')
+                    );
+                    if (!isInSelectedFolder) {
+                        optimizedItems.push(item);
+                    }
+                }
+            }
+
+
+            // 检查是否有任何文件存在冲突
+            let hasConflict = false;
+            const currentPath = this.explorerService.getCurrentRemotePath();
+
+            for (const item of optimizedItems) {
                 const remotePath = `${currentPath}/${item.name}`;
                 const exists = await this.explorerService.checkRemotePathExists(remotePath);
                 if (exists) {
-                    firstConflictItem = item;
+                    hasConflict = true;
                     break;
                 }
             }
 
-            const choice = await this.showUploadConflictModal(firstConflictItem.name);
-            if (choice === 'cancel') return;
-            await this.explorerService.uploadItems(items, choice);
-        } else {
-            // 没有冲突，直接上传
-            await this.explorerService.uploadItems(items, 'overwrite');
+            if (hasConflict) {
+                // 找到第一个冲突的文件
+                let firstConflictItem = optimizedItems[0];
+                for (const item of optimizedItems) {
+                    const remotePath = `${currentPath}/${item.name}`;
+                    const exists = await this.explorerService.checkRemotePathExists(remotePath);
+                    if (exists) {
+                        firstConflictItem = item;
+                        break;
+                    }
+                }
+
+                const choice = await this.showUploadConflictModal(firstConflictItem.name);
+                if (choice === 'cancel') return;
+                await this.explorerService.uploadItems(optimizedItems, choice);
+            } else {
+                // 没有冲突，直接上传
+                await this.explorerService.uploadItems(optimizedItems, 'overwrite');
+            }
+        } catch (error) {
+            console.error('Error in handleUploadWithConflictCheck:', error);
+            this.showNotice('Upload failed: ' + (error as Error).message, true);
         }
     }
 
