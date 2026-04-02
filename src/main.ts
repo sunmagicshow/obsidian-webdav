@@ -206,10 +206,8 @@ export default class WebDAVPlugin extends Plugin {
      * 注册文件菜单事件（右键菜单）
      */
     private registerFileMenu(): void {
-        // 监听文件菜单事件
         this.registerEvent(
             this.app.workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
-                // 获取当前活动的 WebDAV 视图
                 const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER);
                 if (leaves.length === 0) return;
 
@@ -217,45 +215,14 @@ export default class WebDAVPlugin extends Plugin {
                 const view = activeLeaf.view;
                 if (!(view instanceof WebDAVExplorerView)) return;
 
-                // 添加分隔线
                 menu.addSeparator();
 
-                // 添加上传到 WebDAV 菜单项
                 menu.addItem((item) => {
                     item
                         .setTitle(i18n.t.contextMenu.uploadToWebDAV)
                         .setIcon('upload')
                         .onClick(async () => {
                             await view.handleUploadWithConflictCheck([file]);
-                        });
-                });
-            })
-        );
-
-        // 监听文件菜单（多选情况）
-        this.registerEvent(
-            this.app.workspace.on('files-menu', (menu: Menu, files: TAbstractFile[]) => {
-                // 只允许单选，多选时不显示上传菜单
-                if (files.length !== 1) return;
-                
-                // 获取当前活动的 WebDAV 视图
-                const leaves = this.app.workspace.getLeavesOfType(VIEW_TYPE_WEBDAV_EXPLORER);
-                if (leaves.length === 0) return;
-
-                const activeLeaf = leaves[0];
-                const view = activeLeaf.view;
-                if (!(view instanceof WebDAVExplorerView)) return;
-
-                // 添加分隔线
-                menu.addSeparator();
-
-                // 添加上传到 WebDAV 菜单项
-                menu.addItem((item) => {
-                    item
-                        .setTitle(i18n.t.contextMenu.uploadToWebDAV)
-                        .setIcon('upload')
-                        .onClick(async () => {
-                            await view.handleUploadWithConflictCheck(files);
                         });
                 });
             })
