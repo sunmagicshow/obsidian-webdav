@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "inlineSourceMap": true,
+    "inlineSources": true,
     "target": "ES2020",
     "module": "ESNext",
     "lib": [
